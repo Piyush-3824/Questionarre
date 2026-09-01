@@ -1,5 +1,7 @@
 # JavaPractice – Java Collections Practice Platform
 
+> **Created by Tushar & Piyush**
+
 A **LeetCode-style interactive coding platform** with real Java compilation, test case grading, and detailed compiler diagnostics.
 
 ---
