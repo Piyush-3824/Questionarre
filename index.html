@@ -23,20 +23,15 @@
   <header class="header">
     <div class="logo">
       <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8.5 3C8.5 3 7 5 7 8C7 11 9.5 12 9.5 12C9.5 12 8 13.5 8 15C8 16.5 9 18 11 18H14C15.1 18 16 17.1 16 16V9C16 7.9 15.1 7 14 7H10C9.5 7 9 7.5 9 8V11" stroke="url(#coffeeGrad)" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M16 9H18C19.1 9 20 9.9 20 11V13C20 14.1 19.1 15 18 15H16" stroke="url(#coffeeGrad)" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M6 21H18" stroke="url(#coffeeGrad)" stroke-width="1.5" stroke-linecap="round"/>
-        <defs>
-          <linearGradient id="coffeeGrad" x1="6" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#00d4ff"/><stop offset="1" stop-color="#7c3aed"/>
-          </linearGradient>
-        </defs>
+        <path d="M8.5 3C8.5 3 7 5 7 8C7 11 9.5 12 9.5 12C9.5 12 8 13.5 8 15C8 16.5 9 18 11 18H14C15.1 18 16 17.1 16 16V9C16 7.9 15.1 7 14 7H10C9.5 7 9 7.5 9 8V11" stroke="#32d2fe" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M16 9H18C19.1 9 20 9.9 20 11V13C20 14.1 19.1 15 18 15H16" stroke="#32d2fe" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M6 21H18" stroke="#32d2fe" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
       <span class="logo-text">Java<span class="logo-accent">Practice</span></span>
     </div>
 
     <div class="header-center">
-      <span class="topic-badge">&#x2615; Java Collections · Real Compiler</span>
+      <span class="topic-badge">&#x2615; Java Practice &middot; Real Compiler</span>
       <span class="authors-badge">Made by Tushar and Piyush</span>
     </div>
 
@@ -45,7 +40,7 @@
         <span class="api-dot"></span><span id="apiStatusText">Connecting...</span>
       </div>
       <div class="progress-info">
-        <span id="solvedCount">0</span><span class="prog-label">/15 Solved</span>
+        <span id="solvedCount">0</span><span class="prog-label"> / <span id="totalCount">48</span> Solved</span>
       </div>
     </div>
   </header>
@@ -58,11 +53,14 @@
   <!-- ══════════ LAYOUT ══════════ -->
   <div class="app-layout">
 
+    <!-- Floating sidebar reopen button (visible when sidebar is collapsed) -->
+    <button class="sidebar-reopen-btn" id="sidebarReopenBtn" title="Open sidebar" onclick="openSidebar()">&#x276F;</button>
+
     <!-- ── SIDEBAR ── -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>Problems</h2>
-        <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">&#x2039;</button>
+        <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">&#x2039;</button>
       </div>
       <div class="problem-list" id="problemList"></div>
       <div class="nav-arrows">
@@ -116,6 +114,7 @@
             <div class="editor-toolbar-right">
               <button class="btn btn-ghost" onclick="formatCode()" title="Format code (auto-indent)">&#x2728; Format</button>
               <button class="btn btn-ghost" id="btnReset" onclick="resetCode()">&#x21BA; Reset</button>
+              <button class="btn btn-stop hidden" id="btnStop" onclick="stopCompile()" title="Stop compilation">&#x25A0; Stop</button>
               <button class="btn btn-run" id="btnRun" onclick="runTests()">
                 <span class="run-icon">&#x25B6;</span>
                 <span class="run-text">Run &amp; Compile</span>
@@ -129,6 +128,17 @@
           <!-- Keyword hints bar -->
           <div class="keyword-bar" id="keywordBar">
             <span class="kw-label">Quick insert:</span>
+          </div>
+
+          <!-- Chip config modal -->
+          <div class="chip-config-overlay hidden" id="chipConfigOverlay" onclick="closeChipConfig(event)">
+            <div class="chip-config-panel" id="chipConfigPanel">
+              <div class="chip-config-header">
+                <span>&#x2699; Configure Quick Insert Chips</span>
+                <button onclick="closeChipConfig()" class="chip-config-close">&#x2715;</button>
+              </div>
+              <div class="chip-config-list" id="chipConfigList"></div>
+            </div>
           </div>
         </div>
 
@@ -146,6 +156,7 @@
           <div class="terminal-tabs">
             <button class="term-tab active" id="ttResults" onclick="switchTermTab('results')">Test Results</button>
             <button class="term-tab" id="ttConsole" onclick="switchTermTab('console')">Console</button>
+            <button class="term-tab" id="ttCustom" onclick="switchTermTab('custom')">&#x1F3AE; Custom Input</button>
           </div>
           <div class="terminal-actions">
             <button class="term-btn" onclick="clearTerminal()" title="Clear terminal">&#x1F5D1; Clear</button>
@@ -163,6 +174,25 @@
             <div class="console-output" id="consoleOutput">
               <span class="console-line prompt">$ javac Main.java &amp;&amp; java Main</span>
               <span class="console-line info">Ready. Write your code and click "Run &amp; Compile".</span>
+            </div>
+          </div>
+          <!-- Custom Input tab -->
+          <div id="tabCustom" class="term-pane hidden">
+            <div class="custom-input-pane">
+              <div class="custom-input-top">
+                <label class="custom-input-label">&#x1F4E5; Stdin Input</label>
+                <div class="custom-input-actions">
+                  <button class="btn btn-ghost custom-fill-tc" onclick="fillFromTestCase()" title="Fill from Test Case 1">Fill from TC1</button>
+                  <button class="btn btn-run custom-run-btn" id="btnCustomRun" onclick="runCustomInput()">
+                    <span>&#x25B6;</span> Run
+                  </button>
+                </div>
+              </div>
+              <textarea class="custom-input-area" id="customInputArea" placeholder="Enter your custom input here...&#10;Example:&#10;5&#10;1 2 3 4 5" spellcheck="false"></textarea>
+              <div class="custom-output-label">&#x1F4E4; Output</div>
+              <div class="custom-output-area" id="customOutputArea">
+                <span class="console-line info">Run your code to see output here.</span>
+              </div>
             </div>
           </div>
         </div>
@@ -188,6 +218,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/display/placeholder.min.js"></script>
 
   <script src="problems.js"></script>
+  <script src="exception_problems.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,1222 @@
+Practice Programs: Exception Handling in Java
+
+Java
+
+Beginner
+
+Aug 14, 2026
+
+This tutorial focuses on practical programming problems based on:
+
+try
+
+catch
+
+Multiple  catch
+
+finally
+
+throw
+
+throws
+
+Exception propagation
+
+Common runtime exceptions
+
+Input validation
+
+Question 1: Handle Division by Zero
+
+Problem Statement
+
+Write a Java program to read two integers and divide the first number by the second number.
+If the second number is zero, handle the  ArithmeticException  and display an appropriate message.
+
+Sample Input
+
+20
+5
+
+Sample Output
+
+Result = 4
+
+Sample Input
+
+20
+0
+
+Sample Output
+
+Cannot divide by zero
+
+Approach
+
+1.  Read two integers.
+
+2.  Place the division operation inside  try .
+
+3.  Handle  ArithmeticException  using  catch .
+
+4.  Display the result if no exception occurs.
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int a = sc.nextInt();
+        int b = sc.nextInt();
+
+        try
+        {
+            int result = a / b;
+
+            System.out.println("Result = " + result);
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println("Cannot divide by zero");
+        }
+    }
+}
+
+Concept Used
+
+try
+ ↓
+Division
+ ↓
+ArithmeticException?
+ ↓
+catch
+
+Question 2: Handle Invalid Array Index
+
+Problem Statement
+
+Given an array of integers and an index, print the element at that index.
+
+If the index is invalid, handle the exception and print:
+
+Invalid Index
+
+Sample Input
+
+5
+10 20 30 40 50
+2
+
+Sample Output
+
+Element = 30
+
+Sample Input
+
+5
+10 20 30 40 50
+7
+
+Sample Output
+
+Invalid Index
+
+Approach
+
+The valid indexes of an array of size  5  are:
+
+0 1 2 3 4
+
+Accessing index  7  causes  ArrayIndexOutOfBoundsException .
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int n = sc.nextInt();
+
+        int[] arr = new int[n];
+
+        for(int i = 0; i < n; i++)
+        {
+            arr[i] = sc.nextInt();
+        }
+
+        int index = sc.nextInt();
+
+        try
+        {
+            System.out.println("Element = " + arr[index]);
+        }
+        catch(ArrayIndexOutOfBoundsException e)
+        {
+            System.out.println("Invalid Index");
+        }
+    }
+}
+
+Question 3: Handle Invalid Number Conversion
+
+Problem Statement
+
+Read a number as a String and convert it into an integer.
+If the String does not contain a valid integer, handle the  NumberFormatException .
+
+Sample Input
+
+123
+
+Sample Output
+
+Number = 123
+
+Sample Input
+
+12abc
+
+Sample Output
+
+Invalid Number
+
+Approach
+
+Use:
+
+Integer.parseInt()
+
+If the String cannot be converted into an integer, Java generates  NumberFormatException .
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        String input = sc.nextLine();
+
+        try
+        {
+            int number = Integer.parseInt(input);
+
+            System.out.println("Number = " + number);
+        }
+        catch(NumberFormatException e)
+        {
+            System.out.println("Invalid Number");
+        }
+    }
+}
+
+Question 4: Handle NullPointerException
+
+Problem Statement
+
+Create a String variable that may contain  null .
+Attempt to find its length.
+If the String is  null , handle the  NullPointerException .
+
+Sample Output
+
+String is null
+
+Full Running Java Code
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        String text = null;
+
+        try
+        {
+            System.out.println("Length = " + text.length());
+        }
+        catch(NullPointerException e)
+        {
+            System.out.println("String is null");
+        }
+    }
+}
+
+Question 5: Multiple Exceptions
+
+Problem Statement
+
+Write a program that can handle both:
+
+Division by zero
+
+Invalid array index
+
+Use multiple  catch  blocks.
+
+Sample Input
+
+10
+0
+
+Sample Output
+
+Cannot divide by zero
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int[] arr = {10, 20, 30};
+
+        int choice = sc.nextInt();
+
+        try
+        {
+            if(choice == 1)
+            {
+                int result = 10 / 0;
+
+                System.out.println(result);
+            }
+            else
+            {
+                System.out.println(arr[5]);
+            }
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println("Cannot divide by zero");
+        }
+        catch(ArrayIndexOutOfBoundsException e)
+        {
+            System.out.println("Invalid Array Index");
+        }
+    }
+}
+
+Question 6: Use finally
+
+Problem Statement
+
+Read two integers and divide them.
+Use  try-catch-finally .
+The  finally  block must display:
+
+Program completed
+
+regardless of whether an exception occurs.
+
+Sample Input
+
+20
+0
+
+Sample Output
+
+Cannot divide by zero
+Program completed
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int a = sc.nextInt();
+        int b = sc.nextInt();
+
+        try
+        {
+            int result = a / b;
+
+            System.out.println("Result = " + result);
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println("Cannot divide by zero");
+        }
+        finally
+        {
+            System.out.println("Program completed");
+        }
+    }
+}
+
+Question 7: Validate Age Using throw
+
+Problem Statement
+
+Write a program that reads a person's age.
+If the age is less than  18 , explicitly throw an  IllegalArgumentException .
+Otherwise print:
+
+Eligible
+
+Sample Input
+
+21
+
+Sample Output
+
+Eligible
+
+Sample Input
+
+15
+
+Sample Output
+
+Not Eligible
+
+Approach
+
+The exception is not generated automatically by Java.
+
+The program explicitly generates it using:
+
+throw new IllegalArgumentException();
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int age = sc.nextInt();
+
+        try
+        {
+            if(age < 18)
+            {
+                throw new IllegalArgumentException();
+            }
+
+            System.out.println("Eligible");
+        }
+        catch(IllegalArgumentException e)
+        {
+            System.out.println("Not Eligible");
+        }
+    }
+}
+
+Question 8: throw with a Custom Message
+
+Problem Statement
+
+Read a person's marks.
+If marks are less than  0  or greater than  100 , throw an  IllegalArgumentException  with the message:
+
+Invalid Marks
+
+Otherwise display the marks.
+
+Sample Input
+
+85
+
+Sample Output
+
+Marks = 85
+
+Sample Input
+
+120
+
+Sample Output
+
+Invalid Marks
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int marks = sc.nextInt();
+
+        try
+        {
+            if(marks < 0 || marks > 100)
+            {
+                throw new IllegalArgumentException("Invalid Marks");
+            }
+
+            System.out.println("Marks = " + marks);
+        }
+        catch(IllegalArgumentException e)
+        {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+Question 9: Method Using throws
+
+Problem Statement
+
+Create a method  divide()  that performs division.
+Declare the method using  throws ArithmeticException .
+Handle the exception in the  main()  method.
+
+Sample Input
+
+20
+0
+
+Sample Output
+
+Cannot divide by zero
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    static int divide(int a, int b) throws ArithmeticException
+    {
+        return a / b;
+    }
+
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int a = sc.nextInt();
+        int b = sc.nextInt();
+
+        try
+        {
+            int result = divide(a, b);
+
+            System.out.println("Result = " + result);
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println("Cannot divide by zero");
+        }
+    }
+}
+
+Question 10: Exception Propagation
+
+Problem Statement
+
+Create three methods:
+
+method1()
+method2()
+method3()
+
+Generate an exception inside  method3() .
+Allow it to propagate to  main()  and handle it there.
+
+Sample Output
+
+Exception handled in main
+
+Full Running Java Code
+
+public class Main
+{
+    static void method3()
+    {
+        int result = 10 / 0;
+
+        System.out.println(result);
+    }
+
+    static void method2()
+    {
+        method3();
+    }
+
+    static void method1()
+    {
+        method2();
+    }
+
+    public static void main(String[] args)
+    {
+        try
+        {
+            method1();
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println("Exception handled in main");
+        }
+    }
+}
+
+Flow
+
+main()
+  ↓
+method1()
+  ↓
+method2()
+  ↓
+method3()
+  ↓
+Exception
+  ↓
+method2()
+  ↓
+method1()
+  ↓
+main()
+  ↓
+catch
+
+This is called Exception Propagation.
+
+Question 11: Validate a Number Using throw
+
+Problem Statement
+
+Read a number.
+If the number is negative, throw an  IllegalArgumentException .
+Otherwise calculate its square.
+
+Sample Input
+
+5
+
+Sample Output
+
+Square = 25
+
+Sample Input
+
+-5
+
+Sample Output
+
+Number cannot be negative
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    static int square(int number)
+    {
+        if(number < 0)
+        {
+            throw new IllegalArgumentException(
+                "Number cannot be negative"
+            );
+        }
+
+        return number * number;
+    }
+
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int number = sc.nextInt();
+
+        try
+        {
+            System.out.println("Square = " + square(number));
+        }
+        catch(IllegalArgumentException e)
+        {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+Question 12: Password Validation
+
+Problem Statement
+
+Write a program to validate a password.
+A password is valid if its length is at least  8 .
+If the password contains fewer than  8  characters, throw an  IllegalArgumentException .
+
+Sample Input
+
+java@1234
+
+Sample Output
+
+Valid Password
+
+Sample Input
+
+java123
+
+Sample Output
+
+Invalid Password
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    static void validatePassword(String password)
+    {
+        if(password.length() < 8)
+        {
+            throw new IllegalArgumentException();
+        }
+
+        System.out.println("Valid Password");
+    }
+
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        String password = sc.nextLine();
+
+        try
+        {
+            validatePassword(password);
+        }
+        catch(IllegalArgumentException e)
+        {
+            System.out.println("Invalid Password");
+        }
+    }
+}
+
+Question 13: Multiple catch with User Input
+
+Problem Statement
+
+Read two integers and an array index.
+
+Perform:
+
+1.  Division of the two numbers.
+
+2.  Access the array using the given index.
+
+Handle both possible exceptions using separate  catch  blocks.
+
+Sample Input
+
+10
+2
+1
+
+Sample Output
+
+Division = 5
+Element = 20
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int a = sc.nextInt();
+        int b = sc.nextInt();
+        int index = sc.nextInt();
+
+        int[] arr = {10, 20, 30};
+
+        try
+        {
+            int result = a / b;
+
+            System.out.println("Division = " + result);
+
+            System.out.println(
+                "Element = " + arr[index]
+            );
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println("Cannot divide by zero");
+        }
+        catch(ArrayIndexOutOfBoundsException e)
+        {
+            System.out.println("Invalid array index");
+        }
+    }
+}
+
+Question 14: Exception Information
+
+Problem Statement
+
+Generate an  ArithmeticException  and display:
+
+Exception class name
+
+Exception message
+
+Sample Output
+
+Exception Type : ArithmeticException
+Message : / by zero
+
+Full Running Java Code
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        try
+        {
+            int result = 10 / 0;
+
+            System.out.println(result);
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println(
+                "Exception Type : " +
+                e.getClass().getSimpleName()
+            );
+
+            System.out.println(
+                "Message : " +
+                e.getMessage()
+            );
+        }
+    }
+}
+
+Question 15: Medium — Safe Division Method
+
+Problem Statement
+
+Create a method  divide()  that:
+
+Accepts two integers.
+
+Throws an  ArithmeticException  when the divisor is zero.
+
+Returns the division result otherwise.
+
+Handle the exception in  main() .
+
+Sample Input
+
+100
+5
+
+Sample Output
+
+Result = 20
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    static int divide(int a, int b)
+    {
+        if(b == 0)
+        {
+            throw new ArithmeticException(
+                "Division by zero is not allowed"
+            );
+        }
+
+        return a / b;
+    }
+
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int a = sc.nextInt();
+        int b = sc.nextInt();
+
+        try
+        {
+            int result = divide(a, b);
+
+            System.out.println("Result = " + result);
+        }
+        catch(ArithmeticException e)
+        {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+Question 16: Medium — Validate Array Index
+
+Problem Statement
+
+Create a method  getElement()  that accepts an array and an index.
+If the index is invalid, explicitly throw an  IllegalArgumentException .
+Otherwise return the element.
+
+Sample Input
+
+5
+10 20 30 40 50
+3
+
+Sample Output
+
+Element = 40
+
+Sample Input
+
+5
+10 20 30 40 50
+8
+
+Sample Output
+
+Invalid Index
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    static int getElement(int[] arr, int index)
+    {
+        if(index < 0 || index >= arr.length)
+        {
+            throw new IllegalArgumentException(
+                "Invalid Index"
+            );
+        }
+
+        return arr[index];
+    }
+
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int n = sc.nextInt();
+
+        int[] arr = new int[n];
+
+        for(int i = 0; i < n; i++)
+        {
+            arr[i] = sc.nextInt();
+        }
+
+        int index = sc.nextInt();
+
+        try
+        {
+            int value = getElement(arr, index);
+
+            System.out.println("Element = " + value);
+        }
+        catch(IllegalArgumentException e)
+        {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+Question 17: Medium — Validate Student Marks
+
+Problem Statement
+
+Create a method that accepts marks.
+Valid marks must be between  0  and  100 .
+If the marks are invalid, throw an  IllegalArgumentException .
+Otherwise display:
+
+Valid Marks
+
+Sample Input
+
+85
+
+Sample Output
+
+Valid Marks
+
+Sample Input
+
+105
+
+Sample Output
+
+Invalid Marks
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    static void validateMarks(int marks)
+    {
+        if(marks < 0 || marks > 100)
+        {
+            throw new IllegalArgumentException(
+                "Invalid Marks"
+            );
+        }
+    }
+
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        int marks = sc.nextInt();
+
+        try
+        {
+            validateMarks(marks);
+
+            System.out.println("Valid Marks");
+        }
+        catch(IllegalArgumentException e)
+        {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+Question 18: Medium — Safe Integer Conversion
+
+Problem Statement
+
+Create a method that accepts a String and converts it into an integer.
+If the String is not a valid integer, handle the  NumberFormatException .
+
+Sample Input
+
+250
+
+Sample Output
+
+Number = 250
+
+Sample Input
+
+25A
+
+Sample Output
+
+Invalid Integer
+
+Full Running Java Code
+
+import java.util.Scanner;
+
+public class Main
+{
+    static int convert(String value)
+    {
+        return Integer.parseInt(value);
+    }
+
+    public static void main(String[] args)
+    {
+        Scanner sc = new Scanner(System.in);
+
+        String value = sc.nextLine();
+
+        try
+        {
+            int number = convert(value);
+
+            System.out.println("Number = " + number);
+        }
+        catch(NumberFormatException e)
+        {
+            System.out.println("Invalid Integer");
+        }
+    }
+}
+
+Important Concepts Covered
+
+QUESTION
+
+MAIN CONCEPT
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+try-catch, ArithmeticException
+
+ArrayIndexOutOfBoundsException
+
+NumberFormatException
+
+NullPointerException
+
+Multiple catch
+
+finally
+
+throw
+
+throw with message
+
+throws
+
+Exception propagation
+
+Validation using throw
+
+String validation
+
+Multiple exceptions
+
+Exception object methods
+
+Exception handling in methods
+
+Explicit validation
+
+Input validation
+
+Method + NumberFormatException
+
+Final Exception Handling Cheat Sheet
+
+try
+ ↓
+Code that may generate exception
+ ↓
+Exception?
+ ├── No
+ │    ↓
+ │  Continue
+ │
+ └── Yes
+      ↓
+    catch
+      ↓
+   finally
+      ↓
+   Continue
+
+Keywords
+
+KEYWORD
+
+REMEMBER IT AS
+
+try
+
+catch
+
+finally
+
+throw
+
+Try risky code
+
+Catch the exception
+
+Final/Cleanup code
+
+Throw an exception explicitly
+
+throws
+
+Declare that a method may pass an exception
+
+Most Important Exceptions for Beginners
+
+ArithmeticException
+ArrayIndexOutOfBoundsException
+StringIndexOutOfBoundsException
+NullPointerException
+NumberFormatException
+InputMismatchException
+
+Most Important Difference
+
+throw
+    ↓
+Actually throws an exception
+
+throws
+    ↓
+Declares a possible exception
+
+These programs provide the core practice required to move from simply understanding exception-handling syntax to
+
+using it correctly in DSA and coding problems.
+
+

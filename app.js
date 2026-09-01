@@ -1,17 +1,14 @@
 // ════════════════════════════════════════════════════════════════
 //  JavaPractice – app.js
 //  Real Java compiler via local Node.js server (server.js)
-//  The local server uses your installed JDK (javac + java)
 // ════════════════════════════════════════════════════════════════
 
 function getCompilerBaseUrl() {
   const saved = localStorage.getItem('jp_compiler_url');
   if (saved) return saved.replace(/\/+$/, '');
-  
-  const isLocal = window.location.hostname === 'localhost' || 
-                  window.location.hostname === '127.0.0.1' || 
+  const isLocal = window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1' ||
                   window.location.protocol === 'file:';
-  
   return isLocal ? 'http://localhost:7654' : 'https://questionarre.onrender.com';
 }
 
@@ -19,16 +16,18 @@ function getCompilerUrl() { return `${getCompilerBaseUrl()}/run`; }
 function getPingUrl()     { return `${getCompilerBaseUrl()}/ping`; }
 
 // ── State ──
-let currentIdx = 0;
-let solved     = new Set(JSON.parse(localStorage.getItem('jp_solved')   || '[]'));
-let attempted  = new Set(JSON.parse(localStorage.getItem('jp_attempted')|| '[]'));
-let userCode   = JSON.parse(localStorage.getItem('jp_code') || '{}');
+const ALL_PROBLEMS = [...PROBLEMS, ...EXCEPTION_PROBLEMS];
+let currentIdx    = 0;
+let solved        = new Set(JSON.parse(localStorage.getItem('jp_solved')    || '[]'));
+let attempted     = new Set(JSON.parse(localStorage.getItem('jp_attempted') || '[]'));
+let userCode      = JSON.parse(localStorage.getItem('jp_code') || '{}');
 let termCollapsed = false;
-let cmEditor   = null;           // CodeMirror instance
-let errorMarks = [];             // line decorations for compiler errors
-let isRunning  = false;
+let cmEditor      = null;
+let errorMarks    = [];
+let isRunning     = false;
+let currentAbortController = null;   // for aborting active fetch
 
-// ── Java keywords + common Collection class names for hints ──
+// ── Java keywords for autocomplete ──
 const JAVA_KEYWORDS = [
   'public','private','protected','static','void','int','double','float',
   'long','char','boolean','byte','short','String','return','new','if','else',
@@ -37,28 +36,49 @@ const JAVA_KEYWORDS = [
   'final','abstract','try','catch','finally','throw','throws','instanceof',
   'ArrayList','LinkedList','HashSet','HashMap','LinkedHashSet','TreeSet','TreeMap',
   'Scanner','System','Math','Collections','Arrays','Integer','Double','Character',
-  'Map','List','Set','Queue','Stack','Deque','Iterator',
+  'Map','List','Set','Queue','Stack','Deque','Iterator','Exception','RuntimeException',
   'getOrDefault','containsKey','contains','add','remove','get','put','size',
   'entrySet','keySet','values','next','hasNext','sort','println','print',
-  'nextInt','nextLine','nextDouble','valueOf','parseInt','toString',
+  'nextInt','nextLine','nextDouble','valueOf','parseInt','toString','getMessage',
   'Map.Entry','entry.getKey','entry.getValue',
 ];
 
-// ── Quick-insert keyword chips shown in the bar ──
-const KEYWORD_CHIPS = [
-  { label: 'ArrayList<>',    code: 'ArrayList<Integer> list = new ArrayList<>();' },
-  { label: 'LinkedList<>',   code: 'LinkedList<Integer> list = new LinkedList<>();' },
-  { label: 'HashSet<>',      code: 'HashSet<Integer> set = new HashSet<>();' },
-  { label: 'HashMap<>',      code: 'HashMap<Integer, Integer> map = new HashMap<>();' },
-  { label: 'LinkedHashSet<>',code: 'LinkedHashSet<String> lhs = new LinkedHashSet<>();' },
-  { label: 'getOrDefault',   code: 'map.getOrDefault(key, 0) + 1' },
-  { label: 'for-each',       code: 'for (int val : list) {\n    \n}' },
-  { label: 'Map.Entry',      code: 'for (Map.Entry<Integer,Integer> e : map.entrySet()) {\n    System.out.println(e.getKey() + " " + e.getValue());\n}' },
-  { label: 'Integer.valueOf', code: 'Integer.valueOf(id)' },
-  { label: 'Collections.sort',code: 'Collections.sort(list);' },
-  { label: 'Scanner',        code: 'Scanner sc = new Scanner(System.in);' },
-  { label: 'remove(val)',    code: '.remove(Integer.valueOf(id));' },
+// ── All available quick-insert chips ──
+const ALL_CHIPS = [
+  // I/O
+  { id: 'println',     label: 'println',         code: 'System.out.println();',                       cat: 'I/O' },
+  { id: 'print',       label: 'print',            code: 'System.out.print();',                         cat: 'I/O' },
+  { id: 'scanner',     label: 'Scanner',          code: 'Scanner sc = new Scanner(System.in);',        cat: 'I/O' },
+  { id: 'nextInt',     label: 'sc.nextInt()',      code: 'sc.nextInt()',                                 cat: 'I/O' },
+  { id: 'nextLine',    label: 'sc.nextLine()',     code: 'sc.nextLine()',                                cat: 'I/O' },
+  { id: 'nextDouble',  label: 'sc.nextDouble()',   code: 'sc.nextDouble()',                              cat: 'I/O' },
+  // Collections
+  { id: 'arraylist',   label: 'ArrayList<>',      code: 'ArrayList<Integer> list = new ArrayList<>();', cat: 'Collections' },
+  { id: 'linkedlist',  label: 'LinkedList<>',     code: 'LinkedList<Integer> list = new LinkedList<>();',cat: 'Collections' },
+  { id: 'hashset',     label: 'HashSet<>',        code: 'HashSet<Integer> set = new HashSet<>();',      cat: 'Collections' },
+  { id: 'hashmap',     label: 'HashMap<>',        code: 'HashMap<Integer, Integer> map = new HashMap<>();',cat: 'Collections' },
+  { id: 'lhs',         label: 'LinkedHashSet<>', code: 'LinkedHashSet<String> lhs = new LinkedHashSet<>();',cat: 'Collections' },
+  { id: 'treeset',     label: 'TreeSet<>',        code: 'TreeSet<Integer> ts = new TreeSet<>();',       cat: 'Collections' },
+  // Iteration
+  { id: 'foreach',     label: 'for-each',         code: 'for (int val : list) {\n    \n}',              cat: 'Loops' },
+  { id: 'fori',        label: 'for (i)',           code: 'for (int i = 0; i < n; i++) {\n    \n}',       cat: 'Loops' },
+  { id: 'mapentry',    label: 'Map.Entry',         code: 'for (Map.Entry<Integer,Integer> e : map.entrySet()) {\n    System.out.println(e.getKey() + " " + e.getValue());\n}', cat: 'Loops' },
+  // Utilities
+  { id: 'getordefault',label: 'getOrDefault',      code: 'map.getOrDefault(key, 0) + 1',                cat: 'Utils' },
+  { id: 'colsort',     label: 'Collections.sort',  code: 'Collections.sort(list);',                     cat: 'Utils' },
+  { id: 'removeval',   label: 'remove(val)',        code: '.remove(Integer.valueOf(id));',                cat: 'Utils' },
+  { id: 'intval',      label: 'Integer.valueOf',    code: 'Integer.valueOf(id)',                          cat: 'Utils' },
+  { id: 'parseint',    label: 'parseInt',           code: 'Integer.parseInt(s)',                          cat: 'Utils' },
+  // Exception Handling
+  { id: 'trycatch',    label: 'try-catch',          code: 'try {\n    \n} catch (Exception e) {\n    System.out.println(e.getMessage());\n}',  cat: 'Exceptions' },
+  { id: 'trycatchfin', label: 'try-catch-finally',  code: 'try {\n    \n} catch (Exception e) {\n    e.printStackTrace();\n} finally {\n    \n}', cat: 'Exceptions' },
+  { id: 'throw',       label: 'throw new',          code: 'throw new IllegalArgumentException("message");', cat: 'Exceptions' },
+  { id: 'custexc',     label: 'Custom Exception',   code: 'class MyException extends Exception {\n    MyException(String msg) { super(msg); }\n}', cat: 'Exceptions' },
 ];
+
+// Chips enabled by default
+const DEFAULT_CHIP_IDS = ['println','print','scanner','nextInt','arraylist','hashmap','hashset','foreach','fori','getordefault','trycatch','colsort'];
+let enabledChipIds = JSON.parse(localStorage.getItem('jp_chips') || 'null') || DEFAULT_CHIP_IDS;
 
 // ════════════════════════════════════════════════════════════════
 //  INIT
@@ -70,16 +90,31 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProblem(0);
   updateHeader();
   checkPistonStatus();
+
   const apiStatusEl = document.getElementById('apiStatus');
   if (apiStatusEl) {
     apiStatusEl.style.cursor = 'pointer';
-    apiStatusEl.title = 'Click to configure Compiler URL (Localhost or Cloud/Render)';
+    apiStatusEl.title = 'Click to configure Compiler URL';
     apiStatusEl.onclick = configureCompilerUrl;
   }
+
+  // Sidebar toggle
   document.getElementById('sidebarToggle').onclick = () => {
-    document.getElementById('sidebar').classList.toggle('collapsed');
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.add('collapsed');
+    document.getElementById('sidebarReopenBtn').classList.add('visible');
   };
+
+  // Close chip config on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeChipConfig();
+  });
 });
+
+function openSidebar() {
+  document.getElementById('sidebar').classList.remove('collapsed');
+  document.getElementById('sidebarReopenBtn').classList.remove('visible');
+}
 
 function configureCompilerUrl() {
   const current = getCompilerBaseUrl();
@@ -118,6 +153,7 @@ function initCodeMirror() {
       'Shift-Tab': (cm) => cm.indentSelection('subtract'),
       'Ctrl-/': (cm) => cm.execCommand('toggleComment'),
       'Ctrl-Enter': () => runTests(),
+      'Escape': () => { if (isRunning) stopCompile(); },
       'Ctrl-Space': (cm) => {
         CodeMirror.showHint(cm, CodeMirror.hint.anyword, {
           completeSingle: false,
@@ -127,7 +163,6 @@ function initCodeMirror() {
     },
   });
 
-  // Auto-hint after typing
   cmEditor.on('inputRead', (cm, change) => {
     if (change.text[0].match(/[\w.]/)) {
       CodeMirror.showHint(cm, javaHint, { completeSingle: false });
@@ -135,37 +170,36 @@ function initCodeMirror() {
     autoSaveCode();
   });
   cmEditor.on('change', autoSaveCode);
-
-  // Make CM fill its container
   cmEditor.setSize('100%', '100%');
 }
 
-// Custom hint function that merges CM anyword + our keyword list
 function javaHint(cm) {
-  const cur = cm.getCursor();
+  const cur   = cm.getCursor();
   const token = cm.getTokenAt(cur);
-  const word = token.string.replace(/[^a-zA-Z0-9_<>.]/g, '');
+  const word  = token.string.replace(/[^a-zA-Z0-9_<>.]/g, '');
   if (!word) return;
-
-  const start = token.start;
-  const end   = cur.ch;
+  const start   = token.start;
+  const end     = cur.ch;
   const matches = JAVA_KEYWORDS
     .filter(k => k.toLowerCase().startsWith(word.toLowerCase()))
     .slice(0, 20);
-
   return { list: matches, from: CodeMirror.Pos(cur.line, start), to: CodeMirror.Pos(cur.line, end) };
 }
 
 // ════════════════════════════════════════════════════════════════
-//  KEYWORD BAR
+//  KEYWORD BAR + CONFIG
 // ════════════════════════════════════════════════════════════════
 function buildKeywordBar() {
   const bar = document.getElementById('keywordBar');
-  KEYWORD_CHIPS.forEach(chip => {
+  // Clear existing chips (keep the label)
+  bar.querySelectorAll('.kw-chip, .kw-config-btn').forEach(el => el.remove());
+
+  const activeChips = ALL_CHIPS.filter(c => enabledChipIds.includes(c.id));
+  activeChips.forEach(chip => {
     const btn = document.createElement('button');
     btn.className = 'kw-chip';
     btn.textContent = chip.label;
-    btn.title = 'Insert: ' + chip.code;
+    btn.title = `[${chip.cat}] Insert: ${chip.code.slice(0, 60)}`;
     btn.onclick = () => {
       const doc = cmEditor.getDoc();
       const cur = doc.getCursor();
@@ -174,6 +208,62 @@ function buildKeywordBar() {
     };
     bar.appendChild(btn);
   });
+
+  // Config gear button
+  const gear = document.createElement('button');
+  gear.className = 'kw-config-btn';
+  gear.title = 'Configure visible chips';
+  gear.innerHTML = '&#x2699;';
+  gear.onclick = openChipConfig;
+  bar.appendChild(gear);
+}
+
+function openChipConfig() {
+  const overlay = document.getElementById('chipConfigOverlay');
+  const listEl  = document.getElementById('chipConfigList');
+  listEl.innerHTML = '';
+
+  // Group by category
+  const cats = {};
+  ALL_CHIPS.forEach(c => { (cats[c.cat] = cats[c.cat] || []).push(c); });
+
+  Object.entries(cats).forEach(([cat, chips]) => {
+    const header = document.createElement('div');
+    header.className = 'chip-cat-header';
+    header.textContent = cat;
+    listEl.appendChild(header);
+
+    chips.forEach(chip => {
+      const row = document.createElement('label');
+      row.className = 'chip-config-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = enabledChipIds.includes(chip.id);
+      cb.onchange = () => {
+        if (cb.checked) { if (!enabledChipIds.includes(chip.id)) enabledChipIds.push(chip.id); }
+        else { enabledChipIds = enabledChipIds.filter(id => id !== chip.id); }
+        localStorage.setItem('jp_chips', JSON.stringify(enabledChipIds));
+        buildKeywordBar();
+      };
+      const label = document.createElement('span');
+      label.className = 'chip-config-name';
+      label.textContent = chip.label;
+      const code = document.createElement('code');
+      code.className = 'chip-config-code';
+      code.textContent = chip.code.split('\n')[0].slice(0, 50);
+      row.appendChild(cb);
+      row.appendChild(label);
+      row.appendChild(code);
+      listEl.appendChild(row);
+    });
+  });
+
+  overlay.classList.remove('hidden');
+}
+
+function closeChipConfig(e) {
+  const overlay = document.getElementById('chipConfigOverlay');
+  if (!e || e.target === overlay) overlay.classList.add('hidden');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -182,13 +272,25 @@ function buildKeywordBar() {
 function buildSidebar() {
   const list = document.getElementById('problemList');
   list.innerHTML = '';
-  PROBLEMS.forEach((p, i) => {
+  ALL_PROBLEMS.forEach((p, i) => {
+    if (i === 0) {
+      const h = document.createElement('div');
+      h.className = 'sidebar-section-title';
+      h.innerHTML = '&#x1F4E6; Collections';
+      list.appendChild(h);
+    }
+    if (i === PROBLEMS.length) {
+      const h = document.createElement('div');
+      h.className = 'sidebar-section-title exception-section';
+      h.innerHTML = '&#x26A0; Exception Handling';
+      list.appendChild(h);
+    }
     const el = document.createElement('div');
     el.className = `problem-item ${solved.has(i) ? 'solved' : ''} ${i === currentIdx ? 'active' : ''}`;
     el.id = `pi-${i}`;
     el.onclick = () => loadProblem(i);
     el.innerHTML = `
-      <span class="problem-item-num">${p.id}</span>
+      <span class="problem-item-num">${i + 1}</span>
       <span class="problem-item-title">${p.title}</span>
       <span class="problem-item-diff diff-${p.difficulty.toLowerCase()}">${p.difficulty}</span>
       <span class="problem-item-check">&#10003;</span>`;
@@ -197,7 +299,7 @@ function buildSidebar() {
 }
 
 function refreshSidebarSelection() {
-  PROBLEMS.forEach((_, i) => {
+  ALL_PROBLEMS.forEach((_, i) => {
     const el = document.getElementById(`pi-${i}`);
     if (!el) return;
     el.className = `problem-item ${solved.has(i) ? 'solved' : ''} ${i === currentIdx ? 'active' : ''}`;
@@ -209,18 +311,22 @@ function prevProblem() {
   else showToast('Already on first problem', 'error');
 }
 function nextProblem() {
-  if (currentIdx < PROBLEMS.length - 1) loadProblem(currentIdx + 1);
+  if (currentIdx < ALL_PROBLEMS.length - 1) loadProblem(currentIdx + 1);
   else showToast('Already on last problem', 'error');
 }
 
 // ════════════════════════════════════════════════════════════════
-//  LOAD PROBLEM
+//  LOAD PROBLEM  (aborts any running compile)
 // ════════════════════════════════════════════════════════════════
 function loadProblem(idx) {
-  currentIdx = idx;
-  const p = PROBLEMS[idx];
+  // Abort ongoing compilation when switching problems
+  if (isRunning && currentAbortController) {
+    currentAbortController.abort();
+  }
 
-  // Description
+  currentIdx = idx;
+  const p = ALL_PROBLEMS[idx];
+
   document.getElementById('problemNumber').textContent = `#${p.id}`;
   document.getElementById('problemTitle').textContent  = p.title;
   const badge = document.getElementById('difficultyBadge');
@@ -228,8 +334,11 @@ function loadProblem(idx) {
   badge.className   = `difficulty-badge ${p.difficulty.toLowerCase()}`;
 
   const tagsHtml = p.tags.map(t => `<span class="tag">${t}</span>`).join('');
+  const collectionBadge = p.collection
+    ? `<div class="collection-type">&#x1F4E6; ${p.collection}</div>`
+    : (p.source ? `<div class="collection-type exception-badge">&#x26A0; ${p.source}</div>` : '');
   document.getElementById('problemBody').innerHTML = `
-    <div class="collection-type">&#x1F4E6; ${p.collection}</div>
+    ${collectionBadge}
     <div class="tag-list">${tagsHtml}</div>
     ${p.description}`;
 
@@ -252,6 +361,10 @@ function loadProblem(idx) {
   document.getElementById('terminalPanel').classList.remove('collapsed');
   termCollapsed = false;
 
+  // Reset custom input output
+  const customOut = document.getElementById('customOutputArea');
+  if (customOut) customOut.innerHTML = '<span class="console-line info">Run your code to see output here.</span>';
+
   switchTab('desc');
   refreshSidebarSelection();
   document.getElementById(`pi-${idx}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -270,9 +383,11 @@ function switchTab(tab) {
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function switchTermTab(tab) {
-  ['results','console'].forEach(t => {
-    document.getElementById(`tab${cap(t)}`).classList.toggle('hidden', t !== tab);
-    document.getElementById(`tt${cap(t)}`).classList.toggle('active', t === tab);
+  ['results','console','custom'].forEach(t => {
+    const pane = document.getElementById(`tab${cap(t)}`);
+    const btn  = document.getElementById(`tt${cap(t)}`);
+    if (pane) pane.classList.toggle('hidden', t !== tab);
+    if (btn)  btn.classList.toggle('active', t === tab);
   });
 }
 
@@ -286,7 +401,7 @@ function toggleTerminal() {
 // ════════════════════════════════════════════════════════════════
 function resetCode() {
   clearErrorHighlights();
-  cmEditor.setValue(PROBLEMS[currentIdx].starterCode);
+  cmEditor.setValue(ALL_PROBLEMS[currentIdx].starterCode);
   cmEditor.clearHistory();
   delete userCode[currentIdx];
   localStorage.setItem('jp_code', JSON.stringify(userCode));
@@ -321,7 +436,6 @@ function clearErrorHighlights() {
 }
 
 function highlightErrorLine(lineNum) {
-  // lineNum is 1-based from javac
   const line = lineNum - 1;
   if (line < 0 || line >= cmEditor.lineCount()) return;
   const mark = cmEditor.addLineClass(line, 'background', 'error-line');
@@ -339,6 +453,8 @@ function clearConsole() {
 function clearTerminal() {
   clearConsole();
   renderPendingCards();
+  const customOut = document.getElementById('customOutputArea');
+  if (customOut) customOut.innerHTML = '<span class="console-line info">Cleared.</span>';
 }
 
 function appendConsole(type, text) {
@@ -386,15 +502,41 @@ async function checkPistonStatus() {
 }
 
 // ════════════════════════════════════════════════════════════════
+//  STOP COMPILE
+// ════════════════════════════════════════════════════════════════
+function stopCompile() {
+  if (currentAbortController) {
+    currentAbortController.abort();
+  }
+  showToast('Compilation stopped', '');
+}
+
+function setRunningUI(running) {
+  const btnRun  = document.getElementById('btnRun');
+  const btnStop = document.getElementById('btnStop');
+  if (running) {
+    btnRun.classList.add('running');
+    btnRun.disabled = true;
+    btnStop.classList.remove('hidden');
+  } else {
+    btnRun.classList.remove('running');
+    btnRun.disabled = false;
+    btnStop.classList.add('hidden');
+    isRunning = false;
+    currentAbortController = null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
 //  MAIN: RUN TESTS
 // ════════════════════════════════════════════════════════════════
 async function runTests() {
   if (isRunning) return;
   const code = cmEditor.getValue().trim();
 
-  // ── Guard: empty code or skeleton with no implementation ──
-  const isStarter = code === PROBLEMS[currentIdx].starterCode.trim();
-  const hasTodo = code.includes('// TODO');
+  const p = ALL_PROBLEMS[currentIdx];
+  const isStarter = code === p.starterCode.trim();
+  const hasTodo   = code.includes('// TODO');
   const hasReturn = code.includes('return ') || code.includes('System.out');
 
   if (!code || !code.includes('class')) {
@@ -415,17 +557,14 @@ async function runTests() {
   }
 
   isRunning = true;
+  currentAbortController = new AbortController();
   clearErrorHighlights();
-
-  const btn = document.getElementById('btnRun');
-  btn.classList.add('running');
-  btn.disabled = true;
+  setRunningUI(true);
 
   attempted.add(currentIdx);
   localStorage.setItem('jp_attempted', JSON.stringify([...attempted]));
   updateHeader();
 
-  // Open terminal
   document.getElementById('terminalPanel').classList.remove('collapsed');
   termCollapsed = false;
 
@@ -433,100 +572,208 @@ async function runTests() {
   appendConsole('prompt', `$ javac Main.java && java Main`);
   appendConsole('info', 'Compiling and running with local JDK...');
 
-  const p = PROBLEMS[currentIdx];
+  try {
+    const results = [];
+    let passCount = 0;
+    let firstCompileError = null;
+    const t0 = Date.now();
 
-  // ── Render all cards as "running" ──
-  renderRunningCards(p);
-  switchTermTab('results');
+    // ── Render running cards ──
+    renderRunningCards(p);
+    switchTermTab('results');
 
-  const results = [];
-  let passCount = 0;
-  let firstCompileError = null;
-  const t0 = Date.now();
-
-  for (let i = 0; i < p.testCases.length; i++) {
-    const tc = p.testCases[i];
-    setCardRunning(i);
-
-    let result;
-    try {
-      result = await runSingleTest(code, tc.input, i);
-    } catch (err) {
-      result = { pass: false, got: '', stderr: err.message, timedOut: false, compileError: true };
-    }
-
-    results.push({ ...result, tc });
-
-    if (result.compileError && !firstCompileError) {
-      firstCompileError = result.stderr;
-    }
-
-    const pass = judgeResult(result, tc);
-    result.pass = pass;
-    if (pass) passCount++;
-
-    renderCard(i, result, tc);
-
-    // If compile error, fail remaining cards immediately (same error)
-    if (result.compileError) {
-      for (let j = i + 1; j < p.testCases.length; j++) {
-        results.push({ pass: false, got: '', stderr: firstCompileError, compileError: true, tc: p.testCases[j] });
-        renderCard(j, results[results.length - 1], p.testCases[j]);
+    for (let i = 0; i < p.testCases.length; i++) {
+      // Check if aborted (user switched problem or clicked stop)
+      if (currentAbortController.signal.aborted) {
+        appendConsole('warn', '⏹ Compilation stopped by user.');
+        break;
       }
-      break;
+
+      const tc = p.testCases[i];
+      setCardRunning(i);
+
+      let result;
+      try {
+        result = await runSingleTest(code, tc.input, currentAbortController.signal);
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          appendConsole('warn', `⏹ Stopped at Test ${i + 1}.`);
+          // Mark remaining as cancelled
+          for (let j = i; j < p.testCases.length; j++) {
+            const card = document.getElementById(`tc-${j}`);
+            if (card) {
+              card.className = 'tc-card pending';
+              card.querySelector('.tc-badge').textContent = '— STOPPED';
+            }
+          }
+          break;
+        }
+        result = { pass: false, got: '', stderr: err.message, timedOut: false, compileError: true };
+      }
+
+      if (!result) break;
+
+      results.push({ ...result, tc });
+
+      if (result.compileError && !firstCompileError) {
+        firstCompileError = result.stderr;
+      }
+
+      const pass = judgeResult(result, tc);
+      result.pass = pass;
+      if (pass) passCount++;
+
+      renderCard(i, result, tc);
+
+      // Also show first test's stdout in console for easy visibility
+      if (i === 0 && result.stdout) {
+        appendConsole('sep', '─── Test 1 Output ─────────────────────────────────');
+        result.stdout.trim().split('\n').forEach(line => appendConsole('output', line));
+      }
+
+      if (result.compileError) {
+        for (let j = i + 1; j < p.testCases.length; j++) {
+          results.push({ pass: false, got: '', stderr: firstCompileError, compileError: true, tc: p.testCases[j] });
+          renderCard(j, results[results.length - 1], p.testCases[j]);
+        }
+        break;
+      }
     }
-  }
 
-  const elapsed = Date.now() - t0;
-  const allPass = passCount === p.testCases.length;
+    const elapsed = Date.now() - t0;
 
-  // ── Console output ──
-  appendConsole('sep', '─'.repeat(56));
+    if (!currentAbortController.signal.aborted) {
+      const allPass = passCount === p.testCases.length;
 
-  if (firstCompileError) {
-    appendConsole('error', '✗ COMPILATION FAILED');
-    appendConsole('sep', '');
-    renderCompileErrors(firstCompileError, code);
-  } else {
-    if (allPass) {
-      appendConsole('success', `✓ ALL ${passCount}/${p.testCases.length} TESTS PASSED  (${elapsed}ms)`);
-    } else {
-      appendConsole('warn', `✗ ${passCount}/${p.testCases.length} TESTS PASSED  (${elapsed}ms)`);
-      // Show first failure detail
-      const fail = results.find(r => !r.pass);
-      if (fail && fail.stderr) {
+      appendConsole('sep', '─'.repeat(56));
+
+      if (firstCompileError) {
+        appendConsole('error', '✗ COMPILATION FAILED');
         appendConsole('sep', '');
-        appendConsole('error', 'Runtime error:');
-        appendConsole('compile-err', fail.stderr.trim().slice(0, 500));
+        renderCompileErrors(firstCompileError, code);
+      } else {
+        if (allPass) {
+          appendConsole('success', `✓ ALL ${passCount}/${p.testCases.length} TESTS PASSED  (${elapsed}ms)`);
+        } else {
+          appendConsole('warn', `✗ ${passCount}/${p.testCases.length} TESTS PASSED  (${elapsed}ms)`);
+          const fail = results.find(r => !r.pass);
+          if (fail && fail.stderr) {
+            appendConsole('sep', '');
+            appendConsole('error', 'Runtime error:');
+            appendConsole('compile-err', fail.stderr.trim().slice(0, 500));
+          }
+        }
+      }
+
+      if (allPass) {
+        solved.add(currentIdx);
+        localStorage.setItem('jp_solved', JSON.stringify([...solved]));
+        refreshSidebarSelection();
+        updateHeader();
+        updateProgressBar();
+        showToast(`🎉 All tests passed! Problem solved!`, 'success');
+        launchConfetti();
+      } else if (!firstCompileError) {
+        showToast(`${passCount}/${p.testCases.length} tests passed`, passCount > 0 ? '' : 'error');
+      } else {
+        showToast('Compilation Error — check the console', 'error');
+        switchTermTab('console');
       }
     }
+  } catch (outerErr) {
+    if (outerErr.name !== 'AbortError') {
+      appendConsole('error', `Unexpected error: ${outerErr.message}`);
+      showToast('Unexpected error — try again', 'error');
+    }
+  } finally {
+    setRunningUI(false);
   }
-
-  // ── Mark solved ──
-  if (allPass) {
-    solved.add(currentIdx);
-    localStorage.setItem('jp_solved', JSON.stringify([...solved]));
-    refreshSidebarSelection();
-    updateHeader();
-    updateProgressBar();
-    showToast(`🎉 All tests passed! Problem solved!`, 'success');
-    launchConfetti();
-  } else if (!firstCompileError) {
-    showToast(`${passCount}/${p.testCases.length} tests passed`, passCount > 0 ? '' : 'error');
-  } else {
-    showToast('Compilation Error — check the console', 'error');
-    switchTermTab('console');
-  }
-
-  btn.classList.remove('running');
-  btn.disabled = false;
-  isRunning = false;
 }
 
 // ════════════════════════════════════════════════════════════════
-//  LOCAL JAVA COMPILER CALL (via server.js)
+//  CUSTOM INPUT RUN
 // ════════════════════════════════════════════════════════════════
-async function runSingleTest(code, stdin, testIndex) {
+async function runCustomInput() {
+  if (isRunning) { showToast('Compilation in progress...', ''); return; }
+
+  const code  = cmEditor.getValue().trim();
+  const stdin = document.getElementById('customInputArea').value;
+  const outEl = document.getElementById('customOutputArea');
+
+  if (!code || !code.includes('class')) {
+    showToast('Please write Java code first!', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnCustomRun');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="blinking">⟳</span> Running...';
+  outEl.innerHTML = '<span class="console-line info blinking">Running...</span>';
+
+  isRunning = true;
+  currentAbortController = new AbortController();
+  setRunningUI(true);
+
+  try {
+    const result = await runSingleTest(code, stdin, currentAbortController.signal);
+    outEl.innerHTML = '';
+
+    if (result.compileError) {
+      outEl.innerHTML = `<span class="console-line error">✗ Compilation Error:</span>`;
+      result.stderr.split('\n').forEach(line => {
+        if (line.trim()) {
+          const s = document.createElement('span');
+          s.className = 'console-line compile-err';
+          s.textContent = line;
+          outEl.appendChild(s);
+        }
+      });
+    } else if (result.timedOut) {
+      outEl.innerHTML = `<span class="console-line error">⏱ Time Limit Exceeded</span>`;
+    } else {
+      const output = result.stdout || result.got || '';
+      if (output.trim()) {
+        output.split('\n').forEach(line => {
+          const s = document.createElement('span');
+          s.className = 'console-line output';
+          s.textContent = line;
+          outEl.appendChild(s);
+        });
+      } else {
+        outEl.innerHTML = `<span class="console-line info">(No output)</span>`;
+      }
+      if (result.stderr && result.exitCode !== 0) {
+        const s = document.createElement('span');
+        s.className = 'console-line error';
+        s.textContent = result.stderr.split('\n')[0] || 'Runtime Error';
+        outEl.prepend(s);
+      }
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      outEl.innerHTML = `<span class="console-line warn">⏹ Stopped.</span>`;
+    } else {
+      outEl.innerHTML = `<span class="console-line error">Error: ${escHtml(err.message)}</span>`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>&#x25B6;</span> Run';
+    setRunningUI(false);
+  }
+}
+
+function fillFromTestCase() {
+  const p = ALL_PROBLEMS[currentIdx];
+  if (p && p.testCases && p.testCases.length > 0) {
+    document.getElementById('customInputArea').value = p.testCases[0].input;
+    showToast('Filled from Test Case 1', '');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  JAVA COMPILER CALL
+// ════════════════════════════════════════════════════════════════
+async function runSingleTest(code, stdin, signal) {
   let resp;
   const compilerUrl = getCompilerUrl();
   try {
@@ -534,9 +781,10 @@ async function runSingleTest(code, stdin, testIndex) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, stdin }),
-      signal: AbortSignal.timeout(30000),
+      signal: signal || AbortSignal.timeout(30000),
     });
   } catch (fetchErr) {
+    if (fetchErr.name === 'AbortError') throw fetchErr;
     throw new Error(
       `Cannot reach compiler server at ${compilerUrl}.\n` +
       `Make sure the server is running (locally or on Render/cloud).\n` +
@@ -550,14 +798,13 @@ async function runSingleTest(code, stdin, testIndex) {
   }
 
   const data = await resp.json();
-
   if (data.error) throw new Error(data.error);
 
   return {
     compileError: data.compileError === true,
-    got: (data.stdout || '').trim(),
-    stderr: data.stderr || '',
-    stdout: data.stdout || '',
+    got:      (data.stdout || '').trim(),
+    stderr:   data.stderr  || '',
+    stdout:   data.stdout  || '',
     exitCode: data.exitCode ?? 0,
     timedOut: data.timedOut === true,
   };
@@ -573,15 +820,12 @@ function judgeResult(result, tc) {
   const expected = normalizeOutput(tc.expected);
 
   if (tc.checkCount) {
-    // For HashSet-based problems, order is not guaranteed
-    // Compare sorted token arrays
     const gotTokens = got.split(/\s+/).filter(Boolean).map(Number).sort((a,b)=>a-b);
     const expCount  = parseInt(tc.expected);
     return gotTokens.length === expCount;
   }
 
   if (tc.anyOrder) {
-    // Compare sorted tokens
     const a = got.split(/\s+/).filter(Boolean).sort().join(' ');
     const b = expected.split(/\s+/).filter(Boolean).sort().join(' ');
     return a === b;
@@ -628,7 +872,7 @@ function renderCompileErrors(stderr, code) {
 function renderPendingCards() {
   const list = document.getElementById('testcaseList');
   list.innerHTML = '';
-  PROBLEMS[currentIdx].testCases.forEach((tc, i) => {
+  ALL_PROBLEMS[currentIdx].testCases.forEach((tc, i) => {
     list.appendChild(buildCard(i, 'pending', 'PENDING', tc, null));
   });
 }
@@ -685,9 +929,9 @@ function buildCard(i, statusClass, statusText, tc, result) {
 }
 
 function cardHTML(i, statusText, statusClass, tc, got, expected, errMsg) {
-  const showGot  = got  !== null && got  !== undefined;
-  const showExp  = expected !== null && expected !== undefined;
-  const showErr  = errMsg !== null && errMsg !== undefined;
+  const showGot = got  !== null && got  !== undefined;
+  const showExp = expected !== null && expected !== undefined;
+  const showErr = errMsg !== null && errMsg !== undefined;
 
   const inputSnip = tc.input.replace(/\n/g, ' ↵ ').slice(0, 55) + (tc.input.length > 55 ? '…' : '');
 
@@ -724,11 +968,13 @@ function cardHTML(i, statusText, statusClass, tc, got, expected, errMsg) {
 // ════════════════════════════════════════════════════════════════
 function updateHeader() {
   document.getElementById('solvedCount').textContent = solved.size;
+  const tc = document.getElementById('totalCount');
+  if (tc) tc.textContent = ALL_PROBLEMS.length;
 }
 
 function updateProgressBar() {
   const fill = document.getElementById('progressBarFill');
-  if (fill) fill.style.width = `${(solved.size / PROBLEMS.length) * 100}%`;
+  if (fill) fill.style.width = `${(solved.size / ALL_PROBLEMS.length) * 100}%`;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -750,7 +996,7 @@ function launchConfetti() {
   c.width  = window.innerWidth;
   c.height = window.innerHeight;
   const ctx = c.getContext('2d');
-  const colors = ['#00d4ff','#7c3aed','#10d48e','#f59e0b','#ec4899','#ffffff'];
+  const colors = ['#32d2fe','#bf5af2','#30d158','#ff9f0a','#ff453a','#ffffff'];
   const pieces = Array.from({ length: 130 }, () => ({
     x: Math.random() * c.width, y: -10 - Math.random() * 120,
     vx: (Math.random() - .5) * 5, vy: 2.5 + Math.random() * 3.5,

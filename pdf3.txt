@@ -1,0 +1,1313 @@
+Practice Questions- Exceptions
+
+Java
+
+Beginner
+
+Aug 24, 2026
+
+Question 1 — Safe Division for a Score Calculator
+
+Problem Statement
+
+A score-analysis program receives two integer values and calculates the quotient of the first value divided by the second.
+
+If the operation is valid, display the quotient.
+
+If the divisor is zero, the program should handle the error and display:
+
+Invalid Division
+
+Implement the solution using Java exception handling.
+
+Approach
+
+Read two integers.
+
+Place the division operation inside a  try  block.
+
+Catch  ArithmeticException .
+
+Print the result for valid input.
+
+Print the required error message when the divisor is zero.
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int a = sc.nextInt();
+        int b = sc.nextInt();
+
+        try {
+            System.out.println(a / b);
+        } catch (ArithmeticException e) {
+            System.out.println("Invalid Division");
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+Integer division by zero causes an  ArithmeticException .
+For example:
+
+20 / 5
+
+produces:
+
+4
+
+whereas:
+
+20 / 0
+
+causes the exception.
+
+The  catch  block prevents abnormal program termination.
+
+Question 2 — Detect Invalid Remainder Operation
+
+Problem Statement
+
+A utility program calculates the remainder obtained when one number is divided by another.
+
+For a valid divisor, print the remainder.
+
+If the divisor is zero, handle the arithmetic error and display:
+
+Remainder Error
+
+Approach
+
+Use the  %  operator inside  try .
+If the second number is zero, Java generates  ArithmeticException , which is handled by  catch .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int x = sc.nextInt();
+        int y = sc.nextInt();
+
+        try {
+            int remainder = x % y;
+            System.out.println(remainder);
+        } catch (ArithmeticException e) {
+            System.out.println("Remainder Error");
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+The  %  operator also requires a non-zero divisor.
+For:
+
+17 % 5
+
+the result is:
+
+2
+
+But:
+
+17 % 0
+
+causes:
+
+ArithmeticException
+
+Question 3 — Guaranteed Completion Message
+
+Problem Statement
+
+A data-processing application performs a division operation.
+
+Display the quotient when the calculation succeeds.
+
+If division by zero occurs, print  Calculation Error .
+
+Regardless of what happens during the operation, print:
+
+Operation Finished
+
+The final message must be produced using a  finally  block.
+
+Approach
+
+Use:
+
+try  → division
+
+catch  → arithmetic error
+
+finally  → unconditional completion message
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int total = sc.nextInt();
+        int parts = sc.nextInt();
+
+        try {
+            System.out.println(total / parts);
+        } catch (ArithmeticException e) {
+            System.out.println("Calculation Error");
+        } finally {
+            System.out.println("Operation Finished");
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+finally  executes after the  try / catch  processing.
+If input is:
+
+30
+5
+
+output:
+
+6
+Operation Finished
+
+If input is:
+
+30
+0
+
+output:
+
+Calculation Error
+Operation Finished
+
+Question 4 — Safe Array Position Lookup
+
+Problem Statement
+
+A sports application stores player scores in an integer array.
+
+The user provides a position, and the program must display the score stored at that position.
+
+If the supplied position is outside the array's valid range, display:
+
+Invalid Position
+
+Use exception handling rather than manually checking the index.
+
+Approach
+
+Create the score array.
+
+Read the requested position.
+
+Access the array inside  try .
+
+Catch  ArrayIndexOutOfBoundsException .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int n = sc.nextInt();
+
+        int[] scores = new int[n];
+
+        for (int i = 0; i < n; i++) {
+            scores[i] = sc.nextInt();
+        }
+
+        int position = sc.nextInt();
+
+        try {
+            System.out.println(scores[position]);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("Invalid Position");
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+For an array of size  n , valid indexes are:
+
+0 to n - 1
+
+Attempting to access an invalid index produces an array-index exception.
+
+Question 5 — Explicitly Reject an Invalid Request
+
+Problem Statement
+
+A cinema booking system allows a customer to reserve at most four seats in a single request.
+
+If the requested number exceeds four, the program must deliberately generate an exception with the message:
+
+Seat Limit Exceeded
+
+Otherwise, display:
+
+Booking Confirmed
+
+Use  throw  and  try-catch .
+
+Approach
+
+Read the requested number of seats.
+
+Check whether it exceeds the permitted limit.
+
+Explicitly create an exception using  throw .
+
+Catch the exception and display its message.
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int seats = sc.nextInt();
+
+        try {
+
+            if (seats > 4) {
+                throw new Exception("Seat Limit Exceeded");
+            }
+
+            System.out.println("Booking Confirmed");
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+Here Java does not automatically generate the exception.
+
+The programmer explicitly creates it:
+
+throw new Exception("Seat Limit Exceeded");
+
+This is the important distinction between automatic exception generation and explicitly throwing an exception.
+
+The  throw  keyword is explicitly tested in the collection.
+
+Question 6 — Propagate an Arithmetic Exception
+
+Problem Statement
+
+Create a method:
+
+static int findAverage(int total, int students)
+
+The method should calculate:
+
+total / students
+
+Do not handle the arithmetic exception inside this method. Instead, declare that the method can throw the exception.
+Handle the exception in  main()  and print:
+
+Average Cannot Be Calculated
+
+when the number of students is zero.
+
+Approach
+
+Declare the method with  throws ArithmeticException .
+
+Perform the division inside the method.
+
+Catch the exception from  main() .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+public class Main {
+
+    static int findAverage(int total, int students)
+            throws ArithmeticException {
+
+        return total / students;
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int total = sc.nextInt();
+        int students = sc.nextInt();
+
+        try {
+            System.out.println(findAverage(total, students));
+        } catch (ArithmeticException e) {
+            System.out.println("Average Cannot Be Calculated");
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+The method contains:
+
+throws ArithmeticException
+
+This indicates that the method can allow the exception to propagate to its caller.
+
+The caller handles it:
+
+catch (ArithmeticException e)
+
+Question 7 — Create a Custom Exception for Invalid Temperature
+
+Problem Statement
+
+A weather application accepts a temperature value in Celsius.
+Temperatures below  -90  or above  60  are considered invalid.
+Create a user-defined exception named:
+
+TemperatureException
+
+For invalid input, print:
+
+Invalid Temperature
+
+For valid input, print:
+
+Temperature Accepted
+
+Approach
+
+1.  Create  TemperatureException  by extending  Exception .
+
+2.  Create a validation method.
+
+3.  Throw the custom exception when the value is outside the permitted range.
+
+4.  Handle it in  main() .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class TemperatureException extends Exception {
+
+    public TemperatureException() {
+        super("Invalid Temperature");
+    }
+}
+
+public class Main {
+
+    static void validateTemperature(int temperature)
+            throws TemperatureException {
+
+        if (temperature < -90 || temperature > 60) {
+            throw new TemperatureException();
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int temperature = sc.nextInt();
+
+        try {
+
+            validateTemperature(temperature);
+            System.out.println("Temperature Accepted");
+
+        } catch (TemperatureException e) {
+            System.out.println(e.getMessage());
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+The custom exception is created using:
+
+class TemperatureException extends Exception
+
+The validation method throws it when required:
+
+throw new TemperatureException();
+
+This establishes the basic pattern required for user-defined exceptions.
+
+Question 8 — Validate a Number Range Using a Custom Exception
+
+Problem Statement
+
+A contest registration system accepts a participant's score.
+
+The score must satisfy:
+
+minimum:  0
+
+maximum:  500
+
+Create a custom exception named  ScoreException .
+If the score is invalid, throw the exception with the message:
+
+Score Out of Range
+
+Otherwise print the score itself.
+
+Approach
+
+Use a custom exception and a separate validation method.
+
+The method should use  throws ScoreException .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class ScoreException extends Exception {
+
+    public ScoreException() {
+        super("Score Out of Range");
+    }
+}
+
+public class Main {
+
+    static void validateScore(int score)
+            throws ScoreException {
+
+        if (score < 0 || score > 500) {
+            throw new ScoreException();
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int score = sc.nextInt();
+
+        try {
+
+            validateScore(score);
+            System.out.println(score);
+
+        } catch (ScoreException e) {
+            System.out.println(e.getMessage());
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+This question adds a second layer to Question 7:
+
+custom exception
+
+extends Exception
+
+constructor
+
+getMessage()
+
+throw
+
+throws
+
+try-catch
+
+Question 9 — Custom Exception with Error Codes
+
+Problem Statement
+
+A parcel service checks the declared weight of a package.
+
+Use these rules:
+
+Weight less than  1  kg → error code  101
+
+Weight greater than  25  kg → error code  202
+
+Otherwise → valid
+
+Create a custom exception  PackageWeightException  containing an integer error code.
+Print the error code when an exception occurs.
+
+For valid input, print:
+
+Accepted
+
+Approach
+
+Create an exception class with:
+
+private int code;
+
+The code is supplied through the constructor.
+
+Throw different exception objects depending on the violated rule.
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class PackageWeightException extends Exception {
+
+    private int code;
+
+    public PackageWeightException(int code) {
+        this.code = code;
+    }
+
+    public int getCode() {
+        return code;
+    }
+}
+
+public class Main {
+
+    static void validateWeight(int weight)
+            throws PackageWeightException {
+
+        if (weight < 1) {
+            throw new PackageWeightException(101);
+        }
+
+        if (weight > 25) {
+            throw new PackageWeightException(202);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int weight = sc.nextInt();
+
+        try {
+
+            validateWeight(weight);
+            System.out.println("Accepted");
+
+        } catch (PackageWeightException e) {
+            System.out.println(e.getCode());
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+This is an important pattern because the supplied papers don't only use custom exception messages; one of the papers
+
+uses an exception carrying an integer error code.
+
+The code is stored inside the exception:
+
+private int code;
+
+and retrieved using:
+
+e.getCode()
+
+Question 10 — Password Validation with Custom Exception
+
+Problem Statement
+
+A website requires every password to satisfy these conditions:
+
+1.  At least  7  characters.
+
+2.  At least one digit.
+
+3.  At least one uppercase letter.
+
+Create a custom exception named  PasswordRuleException .
+If the password violates any rule, throw the exception and print:
+
+Invalid Password
+
+Otherwise print:
+
+Password Accepted
+
+Approach
+
+Traverse the password character by character.
+
+Track whether a digit and uppercase character are present.
+
+Check the length requirement.
+
+Throw  PasswordRuleException  if any condition fails.
+
+Handle it using  try-catch .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class PasswordRuleException extends Exception {
+
+    public PasswordRuleException() {
+        super("Invalid Password");
+    }
+}
+
+public class Main {
+
+    static void validatePassword(String password)
+            throws PasswordRuleException {
+
+        boolean hasDigit = false;
+        boolean hasUpper = false;
+
+        for (int i = 0; i < password.length(); i++) {
+
+            char ch = password.charAt(i);
+
+            if (Character.isDigit(ch)) {
+                hasDigit = true;
+            }
+
+            if (Character.isUpperCase(ch)) {
+                hasUpper = true;
+            }
+        }
+
+        if (password.length() < 7 || !hasDigit || !hasUpper) {
+            throw new PasswordRuleException();
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        String password = sc.nextLine();
+
+        try {
+
+            validatePassword(password);
+            System.out.println("Password Accepted");
+
+        } catch (PasswordRuleException e) {
+            System.out.println(e.getMessage());
+        }
+
+        sc.close();
+    }
+}
+
+Question 11 — Validate a User ID
+
+Problem Statement
+
+A university creates user IDs using the following format:
+
+exactly  6  characters;
+
+first character must be a letter;
+
+remaining characters must be digits.
+
+For example:
+
+A12345
+
+is valid.
+
+Create  InvalidUserIdException .
+Print  Valid ID  for valid input and  Invalid ID  when the validation fails.
+
+Approach
+
+1.  Check the length.
+
+2.  Check the first character.
+
+3.  Check all remaining characters.
+
+4.  Throw a custom exception if any rule fails.
+
+5.  Catch the exception in  main() .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class InvalidUserIdException extends Exception {
+
+    public InvalidUserIdException() {
+        super("Invalid ID");
+    }
+}
+
+public class Main {
+
+    static void validateUserId(String id)
+            throws InvalidUserIdException {
+
+        if (id.length() != 6) {
+            throw new InvalidUserIdException();
+        }
+
+        if (!Character.isLetter(id.charAt(0))) {
+            throw new InvalidUserIdException();
+        }
+
+        for (int i = 1; i < id.length(); i++) {
+
+            if (!Character.isDigit(id.charAt(i))) {
+                throw new InvalidUserIdException();
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        String id = sc.nextLine();
+
+        try {
+
+            validateUserId(id);
+            System.out.println("Valid ID");
+
+        } catch (InvalidUserIdException e) {
+            System.out.println(e.getMessage());
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+This question prepares students for the string-validation + custom exception structure used in the email-validation
+
+questions.
+Instead of checking  @  and  . , the student must validate a different character pattern.
+
+Question 12 — Custom Exception in a Calculation
+
+Problem Statement
+
+Create a method:
+
+static int calculatePower(int base, int exponent)
+
+The method should calculate  base  raised to  exponent .
+The following inputs are invalid:
+
+negative base
+
+negative exponent
+
+For either invalid condition, throw a custom  PowerException  with:
+
+Negative Input
+
+Otherwise return the calculated power.
+
+Approach
+
+Create  PowerException .
+
+Validate both parameters.
+
+Throw the custom exception when either value is negative.
+
+Calculate the power using a loop.
+
+Handle the exception in  main() .
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class PowerException extends Exception {
+
+    public PowerException() {
+        super("Negative Input");
+    }
+}
+
+public class Main {
+
+    static int calculatePower(int base, int exponent)
+            throws PowerException {
+
+        if (base < 0 || exponent < 0) {
+            throw new PowerException();
+        }
+
+        int result = 1;
+
+        for (int i = 1; i <= exponent; i++) {
+            result *= base;
+        }
+
+        return result;
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int base = sc.nextInt();
+        int exponent = sc.nextInt();
+
+        try {
+
+            System.out.println(
+                calculatePower(base, exponent)
+            );
+
+        } catch (PowerException e) {
+
+            System.out.println(e.getMessage());
+        }
+
+        sc.close();
+    }
+}
+
+Question 13 — Process Multiple Login Requests
+
+Problem Statement
+
+A system receives several account passwords.
+
+For every password:
+
+it must contain at least  6  characters;
+
+it must contain at least one digit.
+
+Create a custom exception named  CredentialException  containing an integer status code.
+Use:
+
+-5  when the password is too short;
+
+3  when the password has no digit.
+
+If the password satisfies both conditions, print:
+
+1
+
+Otherwise print the appropriate exception code.
+
+Approach
+
+For each test case:
+
+1.  Read the password.
+
+2.  Validate its length.
+
+3.  Validate the presence of a digit.
+
+4.  Throw the corresponding custom exception.
+
+5.  Catch the exception and print its code.
+
+6.  Continue with the next password.
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class CredentialException extends Exception {
+
+    private int code;
+
+    public CredentialException(int code) {
+        this.code = code;
+    }
+
+    public int getCode() {
+        return code;
+    }
+}
+
+public class Main {
+
+    static void validatePassword(String password)
+            throws CredentialException {
+
+        if (password.length() < 6) {
+            throw new CredentialException(-5);
+        }
+
+        boolean hasDigit = false;
+
+        for (int i = 0; i < password.length(); i++) {
+
+            if (Character.isDigit(password.charAt(i))) {
+                hasDigit = true;
+                break;
+            }
+        }
+
+        if (!hasDigit) {
+            throw new CredentialException(3);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int t = sc.nextInt();
+        sc.nextLine();
+
+        while (t-- > 0) {
+
+            String password = sc.nextLine();
+
+            try {
+
+                validatePassword(password);
+                System.out.println(1);
+
+            } catch (CredentialException e) {
+
+                System.out.println(e.getCode());
+            }
+        }
+
+        sc.close();
+
+    }
+}
+
+Explanation
+
+This combines:
+
+multiple test cases
+
+custom exception
+
+constructor argument
+
+error code
+
+throw
+
+throws
+
+try-catch
+
+string traversal
+
+This is particularly useful preparation for the repeated password-exception pattern in the collection.
+
+Question 14 — Array Processing with ArithmeticException
+
+Problem Statement
+
+Given an integer array, calculate the sum of all its elements.
+For every element  x , calculate:
+
+remaining = total - x
+
+Then determine whether:
+
+remaining % x == 0
+
+Count all elements satisfying the condition.
+If an element is zero, the modulo operation will cause an  ArithmeticException .
+Do not prevent the exception manually. Allow it to occur and handle it using  catch .
+
+Approach
+
+1.  Calculate the total sum.
+
+2.  Traverse the array.
+
+3.  Calculate the remaining sum.
+
+4.  Apply  % .
+
+5.  If an element is zero, Java generates  ArithmeticException .
+
+6.  Catch the exception and print its standard message.
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+public class Main {
+
+    static void processArray(int[] arr) {
+
+        int total = 0;
+
+        for (int value : arr) {
+            total += value;
+        }
+
+        int count = 0;
+
+        try {
+
+            for (int value : arr) {
+
+                int remaining = total - value;
+
+                if (remaining % value == 0) {
+                    count++;
+                }
+            }
+
+            System.out.println(count);
+
+        } catch (ArithmeticException e) {
+
+            System.out.println(e);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int n = sc.nextInt();
+
+        int[] arr = new int[n];
+
+        for (int i = 0; i < n; i++) {
+            arr[i] = sc.nextInt();
+        }
+
+        processArray(arr);
+
+        sc.close();
+    }
+}
+
+Explanation
+
+This is a deliberate preparation question for the more algorithmic exception problem found in the collection.
+
+The critical operation is:
+
+remaining % value
+
+If:
+
+value == 0
+
+Java produces:
+
+java.lang.ArithmeticException: / by zero
+
+The original collection contains this exact conceptual pattern: an array-processing algorithm where a zero element
+naturally triggers  ArithmeticException .
+
+Question 15 — Complete Custom Validation System
+
+Problem Statement
+
+A university's scholarship portal assigns a student ID and score to each applicant.
+
+An application is accepted only when:
+
+1.  The student ID contains exactly  7  characters.
+
+2.  The first character is an uppercase letter.
+
+3.  The remaining six characters are digits.
+
+4.  The score is between  40  and  100 .
+
+Create a custom exception named:
+
+ApplicationException
+
+The exception should store an error code.
+
+Use:
+
+101  → invalid student ID
+
+202  → invalid score
+
+For a valid application, print:
+
+Accepted
+
+For an invalid application, print the corresponding error code.
+
+Process multiple applicants.
+
+Approach
+
+1.  Create  ApplicationException .
+
+2.  Store the error code inside the exception.
+
+3.  Create a validation method.
+
+4.  Validate the student ID.
+
+5.  Validate the score.
+
+6.  Throw the appropriate exception code.
+
+7.  Catch the exception for each applicant.
+
+8.  Continue processing the remaining applicants.
+
+Full Java Running Code
+
+import java.util.Scanner;
+
+class ApplicationException extends Exception {
+
+    private int code;
+
+    public ApplicationException(int code) {
+        this.code = code;
+    }
+
+    public int getCode() {
+        return code;
+    }
+}
+
+public class Main {
+
+    static void validateApplication(
+            String studentId,
+            int score) throws ApplicationException {
+
+        // Student ID validation
+        if (studentId.length() != 7) {
+            throw new ApplicationException(101);
+        }
+
+        if (!Character.isUpperCase(studentId.charAt(0))) {
+            throw new ApplicationException(101);
+        }
+
+        for (int i = 1; i < studentId.length(); i++) {
+
+            if (!Character.isDigit(studentId.charAt(i))) {
+                throw new ApplicationException(101);
+            }
+        }
+
+        // Score validation
+        if (score < 40 || score > 100) {
+            throw new ApplicationException(202);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int t = sc.nextInt();
+        sc.nextLine();
+
+        while (t-- > 0) {
+
+            String studentId = sc.nextLine();
+            int score = sc.nextInt();
+            sc.nextLine();
+
+            try {
+
+                validateApplication(studentId, score);
+
+                System.out.println("Accepted");
+
+            } catch (ApplicationException e) {
+
+                System.out.println(e.getCode());
+            }
+        }
+
+        sc.close();
+    }
+}
+
+Explanation
+
+Custom Exception
+       ↓
+extends Exception
+       ↓
+Constructor with data
+       ↓
+throw
+       ↓
+throws
+       ↓
+try-catch
+       ↓
+String Validation
+       ↓
+Numeric Validation
+       ↓
+Multiple Test Cases
+       ↓
+Error Codes
+
+
