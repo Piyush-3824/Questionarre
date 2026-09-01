@@ -322,6 +322,15 @@ function loadProblem(idx) {
   // Abort ongoing compilation when switching problems
   if (isRunning && currentAbortController) {
     currentAbortController.abort();
+    // Force-reset UI immediately so the new problem is immediately runnable.
+    // The async finally block in runTests will also fire, but the controller
+    // identity check in setRunningUI(false, ctrl) will safely no-op at that point.
+    const btnRun  = document.getElementById('btnRun');
+    const btnStop = document.getElementById('btnStop');
+    if (btnRun)  { btnRun.classList.remove('running'); btnRun.disabled = false; }
+    if (btnStop) btnStop.classList.add('hidden');
+    isRunning = false;
+    currentAbortController = null;
   }
 
   currentIdx = idx;
@@ -505,25 +514,35 @@ async function checkPistonStatus() {
 //  STOP COMPILE
 // ════════════════════════════════════════════════════════════════
 function stopCompile() {
-  if (currentAbortController) {
-    currentAbortController.abort();
-  }
+  if (!currentAbortController) return;
+  const ctrl = currentAbortController;
+  ctrl.abort();
+  // Immediately reset UI — don't wait for the async finally block
+  const btnRun  = document.getElementById('btnRun');
+  const btnStop = document.getElementById('btnStop');
+  if (btnRun)  { btnRun.classList.remove('running'); btnRun.disabled = false; }
+  if (btnStop) btnStop.classList.add('hidden');
+  isRunning = false;
+  currentAbortController = null;
   showToast('Compilation stopped', '');
 }
 
-function setRunningUI(running) {
+function setRunningUI(running, ctrl) {
   const btnRun  = document.getElementById('btnRun');
   const btnStop = document.getElementById('btnStop');
   if (running) {
     btnRun.classList.add('running');
     btnRun.disabled = true;
-    btnStop.classList.remove('hidden');
+    if (btnStop) btnStop.classList.remove('hidden');
   } else {
     btnRun.classList.remove('running');
     btnRun.disabled = false;
-    btnStop.classList.add('hidden');
+    if (btnStop) btnStop.classList.add('hidden');
     isRunning = false;
-    currentAbortController = null;
+    // Only clear the global controller if it's still the same run's controller.
+    // This prevents a late-finishing old run from wiping a new run's controller.
+    if (ctrl && currentAbortController === ctrl) currentAbortController = null;
+    else if (!ctrl) currentAbortController = null;
   }
 }
 
@@ -557,9 +576,11 @@ async function runTests() {
   }
 
   isRunning = true;
-  currentAbortController = new AbortController();
+  const abortCtrl = new AbortController();
+  currentAbortController = abortCtrl;
+  const runSignal = abortCtrl.signal;  // captured local ref — immune to global state changes
   clearErrorHighlights();
-  setRunningUI(true);
+  setRunningUI(true, abortCtrl);
 
   attempted.add(currentIdx);
   localStorage.setItem('jp_attempted', JSON.stringify([...attempted]));
@@ -583,8 +604,8 @@ async function runTests() {
     switchTermTab('results');
 
     for (let i = 0; i < p.testCases.length; i++) {
-      // Check if aborted (user switched problem or clicked stop)
-      if (currentAbortController.signal.aborted) {
+      // Use local runSignal — safe even if global currentAbortController changes
+      if (runSignal.aborted) {
         appendConsole('warn', '⏹ Compilation stopped by user.');
         break;
       }
@@ -594,11 +615,10 @@ async function runTests() {
 
       let result;
       try {
-        result = await runSingleTest(code, tc.input, currentAbortController.signal);
+        result = await runSingleTest(code, tc.input, runSignal);
       } catch (err) {
         if (err.name === 'AbortError') {
           appendConsole('warn', `⏹ Stopped at Test ${i + 1}.`);
-          // Mark remaining as cancelled
           for (let j = i; j < p.testCases.length; j++) {
             const card = document.getElementById(`tc-${j}`);
             if (card) {
@@ -642,7 +662,7 @@ async function runTests() {
 
     const elapsed = Date.now() - t0;
 
-    if (!currentAbortController.signal.aborted) {
+    if (!runSignal.aborted) {
       const allPass = passCount === p.testCases.length;
 
       appendConsole('sep', '─'.repeat(56));
@@ -686,7 +706,7 @@ async function runTests() {
       showToast('Unexpected error — try again', 'error');
     }
   } finally {
-    setRunningUI(false);
+    setRunningUI(false, abortCtrl);
   }
 }
 
