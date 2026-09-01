@@ -100,21 +100,8 @@ http.createServer(async (req, res) => {
           });
         }
 
-        // Step 2: Run with stdin piped
-        const stdinContent = stdin;
-        const runResult = await runCmd(
-          `java -cp "${tmpDir}" Main`,
-          {
-            cwd: tmpDir,
-            timeout: TIMEOUT,
-            maxBuffer: 512 * 1024,
-            env: { ...process.env, JAVA_TOOL_OPTIONS: '' },
-          }
-        );
-
-        // Inject stdin manually via a wrapper approach
-        // Actually use spawn for proper stdin piping
-        const runWithStdin = await runWithStdinPipe(tmpDir, stdinContent);
+        // Step 2: Run with proper stdin piping
+        const runWithStdin = await runWithStdinPipe(tmpDir, stdin);
 
         fs.rmSync(tmpDir, { recursive: true, force: true });
 

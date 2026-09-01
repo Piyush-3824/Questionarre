@@ -534,7 +534,7 @@ async function runSingleTest(code, stdin, testIndex) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, stdin }),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(30000),
     });
   } catch (fetchErr) {
     throw new Error(
