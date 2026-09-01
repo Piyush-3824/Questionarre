@@ -7,77 +7,77 @@ function getCompilerBaseUrl() {
   const saved = localStorage.getItem('jp_compiler_url');
   if (saved) return saved.replace(/\/+$/, '');
   const isLocal = window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1' ||
-                  window.location.protocol === 'file:';
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:';
   return isLocal ? 'http://localhost:7654' : 'https://questionarre.onrender.com';
 }
 
 function getCompilerUrl() { return `${getCompilerBaseUrl()}/run`; }
-function getPingUrl()     { return `${getCompilerBaseUrl()}/ping`; }
+function getPingUrl() { return `${getCompilerBaseUrl()}/ping`; }
 
 // ── State ──
 const ALL_PROBLEMS = [...PROBLEMS, ...EXCEPTION_PROBLEMS];
-let currentIdx    = 0;
-let solved        = new Set(JSON.parse(localStorage.getItem('jp_solved')    || '[]'));
-let attempted     = new Set(JSON.parse(localStorage.getItem('jp_attempted') || '[]'));
-let userCode      = JSON.parse(localStorage.getItem('jp_code') || '{}');
+let currentIdx = 0;
+let solved = new Set(JSON.parse(localStorage.getItem('jp_solved') || '[]'));
+let attempted = new Set(JSON.parse(localStorage.getItem('jp_attempted') || '[]'));
+let userCode = JSON.parse(localStorage.getItem('jp_code') || '{}');
 let termCollapsed = false;
-let cmEditor      = null;
-let errorMarks    = [];
-let isRunning     = false;
+let cmEditor = null;
+let errorMarks = [];
+let isRunning = false;
 let currentAbortController = null;   // for aborting active fetch
 
 // ── Java keywords for autocomplete ──
 const JAVA_KEYWORDS = [
-  'public','private','protected','static','void','int','double','float',
-  'long','char','boolean','byte','short','String','return','new','if','else',
-  'for','while','do','switch','case','break','continue','class','interface',
-  'extends','implements','import','package','this','super','null','true','false',
-  'final','abstract','try','catch','finally','throw','throws','instanceof',
-  'ArrayList','LinkedList','HashSet','HashMap','LinkedHashSet','TreeSet','TreeMap',
-  'Scanner','System','Math','Collections','Arrays','Integer','Double','Character',
-  'Map','List','Set','Queue','Stack','Deque','Iterator','Exception','RuntimeException',
-  'getOrDefault','containsKey','contains','add','remove','get','put','size',
-  'entrySet','keySet','values','next','hasNext','sort','println','print',
-  'nextInt','nextLine','nextDouble','valueOf','parseInt','toString','getMessage',
-  'Map.Entry','entry.getKey','entry.getValue',
+  'public', 'private', 'protected', 'static', 'void', 'int', 'double', 'float',
+  'long', 'char', 'boolean', 'byte', 'short', 'String', 'return', 'new', 'if', 'else',
+  'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'class', 'interface',
+  'extends', 'implements', 'import', 'package', 'this', 'super', 'null', 'true', 'false',
+  'final', 'abstract', 'try', 'catch', 'finally', 'throw', 'throws', 'instanceof',
+  'ArrayList', 'LinkedList', 'HashSet', 'HashMap', 'LinkedHashSet', 'TreeSet', 'TreeMap',
+  'Scanner', 'System', 'Math', 'Collections', 'Arrays', 'Integer', 'Double', 'Character',
+  'Map', 'List', 'Set', 'Queue', 'Stack', 'Deque', 'Iterator', 'Exception', 'RuntimeException',
+  'getOrDefault', 'containsKey', 'contains', 'add', 'remove', 'get', 'put', 'size',
+  'entrySet', 'keySet', 'values', 'next', 'hasNext', 'sort', 'println', 'print',
+  'nextInt', 'nextLine', 'nextDouble', 'valueOf', 'parseInt', 'toString', 'getMessage',
+  'Map.Entry', 'entry.getKey', 'entry.getValue',
 ];
 
 // ── All available quick-insert chips ──
 const ALL_CHIPS = [
   // I/O
-  { id: 'println',     label: 'println',         code: 'System.out.println();',                       cat: 'I/O' },
-  { id: 'print',       label: 'print',            code: 'System.out.print();',                         cat: 'I/O' },
-  { id: 'scanner',     label: 'Scanner',          code: 'Scanner sc = new Scanner(System.in);',        cat: 'I/O' },
-  { id: 'nextInt',     label: 'sc.nextInt()',      code: 'sc.nextInt()',                                 cat: 'I/O' },
-  { id: 'nextLine',    label: 'sc.nextLine()',     code: 'sc.nextLine()',                                cat: 'I/O' },
-  { id: 'nextDouble',  label: 'sc.nextDouble()',   code: 'sc.nextDouble()',                              cat: 'I/O' },
+  { id: 'println', label: 'println', code: 'System.out.println();', cat: 'I/O' },
+  { id: 'print', label: 'print', code: 'System.out.print();', cat: 'I/O' },
+  { id: 'scanner', label: 'Scanner', code: 'Scanner sc = new Scanner(System.in);', cat: 'I/O' },
+  { id: 'nextInt', label: 'sc.nextInt()', code: 'sc.nextInt()', cat: 'I/O' },
+  { id: 'nextLine', label: 'sc.nextLine()', code: 'sc.nextLine()', cat: 'I/O' },
+  { id: 'nextDouble', label: 'sc.nextDouble()', code: 'sc.nextDouble()', cat: 'I/O' },
   // Collections
-  { id: 'arraylist',   label: 'ArrayList<>',      code: 'ArrayList<Integer> list = new ArrayList<>();', cat: 'Collections' },
-  { id: 'linkedlist',  label: 'LinkedList<>',     code: 'LinkedList<Integer> list = new LinkedList<>();',cat: 'Collections' },
-  { id: 'hashset',     label: 'HashSet<>',        code: 'HashSet<Integer> set = new HashSet<>();',      cat: 'Collections' },
-  { id: 'hashmap',     label: 'HashMap<>',        code: 'HashMap<Integer, Integer> map = new HashMap<>();',cat: 'Collections' },
-  { id: 'lhs',         label: 'LinkedHashSet<>', code: 'LinkedHashSet<String> lhs = new LinkedHashSet<>();',cat: 'Collections' },
-  { id: 'treeset',     label: 'TreeSet<>',        code: 'TreeSet<Integer> ts = new TreeSet<>();',       cat: 'Collections' },
+  { id: 'arraylist', label: 'ArrayList<>', code: 'ArrayList<Integer> list = new ArrayList<>();', cat: 'Collections' },
+  { id: 'linkedlist', label: 'LinkedList<>', code: 'LinkedList<Integer> list = new LinkedList<>();', cat: 'Collections' },
+  { id: 'hashset', label: 'HashSet<>', code: 'HashSet<Integer> set = new HashSet<>();', cat: 'Collections' },
+  { id: 'hashmap', label: 'HashMap<>', code: 'HashMap<Integer, Integer> map = new HashMap<>();', cat: 'Collections' },
+  { id: 'lhs', label: 'LinkedHashSet<>', code: 'LinkedHashSet<String> lhs = new LinkedHashSet<>();', cat: 'Collections' },
+  { id: 'treeset', label: 'TreeSet<>', code: 'TreeSet<Integer> ts = new TreeSet<>();', cat: 'Collections' },
   // Iteration
-  { id: 'foreach',     label: 'for-each',         code: 'for (int val : list) {\n    \n}',              cat: 'Loops' },
-  { id: 'fori',        label: 'for (i)',           code: 'for (int i = 0; i < n; i++) {\n    \n}',       cat: 'Loops' },
-  { id: 'mapentry',    label: 'Map.Entry',         code: 'for (Map.Entry<Integer,Integer> e : map.entrySet()) {\n    System.out.println(e.getKey() + " " + e.getValue());\n}', cat: 'Loops' },
+  { id: 'foreach', label: 'for-each', code: 'for (int val : list) {\n    \n}', cat: 'Loops' },
+  { id: 'fori', label: 'for (i)', code: 'for (int i = 0; i < n; i++) {\n    \n}', cat: 'Loops' },
+  { id: 'mapentry', label: 'Map.Entry', code: 'for (Map.Entry<Integer,Integer> e : map.entrySet()) {\n    System.out.println(e.getKey() + " " + e.getValue());\n}', cat: 'Loops' },
   // Utilities
-  { id: 'getordefault',label: 'getOrDefault',      code: 'map.getOrDefault(key, 0) + 1',                cat: 'Utils' },
-  { id: 'colsort',     label: 'Collections.sort',  code: 'Collections.sort(list);',                     cat: 'Utils' },
-  { id: 'removeval',   label: 'remove(val)',        code: '.remove(Integer.valueOf(id));',                cat: 'Utils' },
-  { id: 'intval',      label: 'Integer.valueOf',    code: 'Integer.valueOf(id)',                          cat: 'Utils' },
-  { id: 'parseint',    label: 'parseInt',           code: 'Integer.parseInt(s)',                          cat: 'Utils' },
+  { id: 'getordefault', label: 'getOrDefault', code: 'map.getOrDefault(key, 0) + 1', cat: 'Utils' },
+  { id: 'colsort', label: 'Collections.sort', code: 'Collections.sort(list);', cat: 'Utils' },
+  { id: 'removeval', label: 'remove(val)', code: '.remove(Integer.valueOf(id));', cat: 'Utils' },
+  { id: 'intval', label: 'Integer.valueOf', code: 'Integer.valueOf(id)', cat: 'Utils' },
+  { id: 'parseint', label: 'parseInt', code: 'Integer.parseInt(s)', cat: 'Utils' },
   // Exception Handling
-  { id: 'trycatch',    label: 'try-catch',          code: 'try {\n    \n} catch (Exception e) {\n    System.out.println(e.getMessage());\n}',  cat: 'Exceptions' },
-  { id: 'trycatchfin', label: 'try-catch-finally',  code: 'try {\n    \n} catch (Exception e) {\n    e.printStackTrace();\n} finally {\n    \n}', cat: 'Exceptions' },
-  { id: 'throw',       label: 'throw new',          code: 'throw new IllegalArgumentException("message");', cat: 'Exceptions' },
-  { id: 'custexc',     label: 'Custom Exception',   code: 'class MyException extends Exception {\n    MyException(String msg) { super(msg); }\n}', cat: 'Exceptions' },
+  { id: 'trycatch', label: 'try-catch', code: 'try {\n    \n} catch (Exception e) {\n    System.out.println(e.getMessage());\n}', cat: 'Exceptions' },
+  { id: 'trycatchfin', label: 'try-catch-finally', code: 'try {\n    \n} catch (Exception e) {\n    e.printStackTrace();\n} finally {\n    \n}', cat: 'Exceptions' },
+  { id: 'throw', label: 'throw new', code: 'throw new IllegalArgumentException("message");', cat: 'Exceptions' },
+  { id: 'custexc', label: 'Custom Exception', code: 'class MyException extends Exception {\n    MyException(String msg) { super(msg); }\n}', cat: 'Exceptions' },
 ];
 
 // Chips enabled by default
-const DEFAULT_CHIP_IDS = ['println','print','scanner','nextInt','arraylist','hashmap','hashset','foreach','fori','getordefault','trycatch','colsort'];
+const DEFAULT_CHIP_IDS = ['println', 'print', 'scanner', 'nextInt', 'arraylist', 'hashmap', 'hashset', 'foreach', 'fori', 'getordefault', 'trycatch', 'colsort'];
 let enabledChipIds = JSON.parse(localStorage.getItem('jp_chips') || 'null') || DEFAULT_CHIP_IDS;
 
 // ════════════════════════════════════════════════════════════════
@@ -174,12 +174,12 @@ function initCodeMirror() {
 }
 
 function javaHint(cm) {
-  const cur   = cm.getCursor();
+  const cur = cm.getCursor();
   const token = cm.getTokenAt(cur);
-  const word  = token.string.replace(/[^a-zA-Z0-9_<>.]/g, '');
+  const word = token.string.replace(/[^a-zA-Z0-9_<>.]/g, '');
   if (!word) return;
-  const start   = token.start;
-  const end     = cur.ch;
+  const start = token.start;
+  const end = cur.ch;
   const matches = JAVA_KEYWORDS
     .filter(k => k.toLowerCase().startsWith(word.toLowerCase()))
     .slice(0, 20);
@@ -220,7 +220,7 @@ function buildKeywordBar() {
 
 function openChipConfig() {
   const overlay = document.getElementById('chipConfigOverlay');
-  const listEl  = document.getElementById('chipConfigList');
+  const listEl = document.getElementById('chipConfigList');
   listEl.innerHTML = '';
 
   // Group by category
@@ -325,9 +325,9 @@ function loadProblem(idx) {
     // Force-reset UI immediately so the new problem is immediately runnable.
     // The async finally block in runTests will also fire, but the controller
     // identity check in setRunningUI(false, ctrl) will safely no-op at that point.
-    const btnRun  = document.getElementById('btnRun');
+    const btnRun = document.getElementById('btnRun');
     const btnStop = document.getElementById('btnStop');
-    if (btnRun)  { btnRun.classList.remove('running'); btnRun.disabled = false; }
+    if (btnRun) { btnRun.classList.remove('running'); btnRun.disabled = false; }
     if (btnStop) btnStop.classList.add('hidden');
     isRunning = false;
     currentAbortController = null;
@@ -337,10 +337,10 @@ function loadProblem(idx) {
   const p = ALL_PROBLEMS[idx];
 
   document.getElementById('problemNumber').textContent = `#${p.id}`;
-  document.getElementById('problemTitle').textContent  = p.title;
+  document.getElementById('problemTitle').textContent = p.title;
   const badge = document.getElementById('difficultyBadge');
   badge.textContent = p.difficulty;
-  badge.className   = `difficulty-badge ${p.difficulty.toLowerCase()}`;
+  badge.className = `difficulty-badge ${p.difficulty.toLowerCase()}`;
 
   const tagsHtml = p.tags.map(t => `<span class="tag">${t}</span>`).join('');
   const collectionBadge = p.collection
@@ -351,7 +351,7 @@ function loadProblem(idx) {
     <div class="tag-list">${tagsHtml}</div>
     ${p.description}`;
 
-  document.getElementById('hintBox').innerHTML      = p.hint;
+  document.getElementById('hintBox').innerHTML = p.hint;
   document.getElementById('solutionCode').innerHTML = `<pre>${escHtml(p.solution)}</pre>`;
 
   // Editor
@@ -384,7 +384,7 @@ function loadProblem(idx) {
 //  TABS
 // ════════════════════════════════════════════════════════════════
 function switchTab(tab) {
-  ['desc','hint','solution'].forEach(t => {
+  ['desc', 'hint', 'solution'].forEach(t => {
     document.getElementById(`panel${cap(t)}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`tab${cap(t)}`).classList.toggle('active', t === tab);
   });
@@ -392,11 +392,11 @@ function switchTab(tab) {
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function switchTermTab(tab) {
-  ['results','console','custom'].forEach(t => {
+  ['results', 'console', 'custom'].forEach(t => {
     const pane = document.getElementById(`tab${cap(t)}`);
-    const btn  = document.getElementById(`tt${cap(t)}`);
+    const btn = document.getElementById(`tt${cap(t)}`);
     if (pane) pane.classList.toggle('hidden', t !== tab);
-    if (btn)  btn.classList.toggle('active', t === tab);
+    if (btn) btn.classList.toggle('active', t === tab);
   });
 }
 
@@ -482,30 +482,34 @@ function appendConsole(type, text) {
 //  API STATUS CHECK
 // ════════════════════════════════════════════════════════════════
 async function checkPistonStatus() {
-  const dot  = document.querySelector('.api-dot');
+  const dot = document.querySelector('.api-dot');
   const text = document.getElementById('apiStatusText');
   const baseUrl = getCompilerBaseUrl();
   const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
 
+  dot.classList.remove('online', 'offline');
+  text.textContent = isLocal ? 'Connecting to local server...' : 'Waking up cloud compiler...';
+
   try {
-    const res = await fetch(getPingUrl(), { signal: AbortSignal.timeout(15000) });
+    const res = await fetch(getPingUrl(), { signal: AbortSignal.timeout(60000) });
     if (res.ok) {
       const data = await res.json();
       dot.classList.add('online');
-      dot.classList.remove('offline');
       text.textContent = isLocal ? 'Local JDK Ready' : 'Cloud Compiler Online';
       appendConsole('success', `✓ Java compiler ready (${data.javaVersion ? 'JDK ' + data.javaVersion : 'Online'})`);
       appendConsole('info', `Connected to: ${baseUrl}`);
-    } else throw new Error();
-  } catch {
+    } else throw new Error(`HTTP ${res.status}`);
+  } catch (e) {
     dot.classList.add('offline');
-    dot.classList.remove('online');
-    text.textContent = 'Server Offline';
+    text.textContent = isLocal ? 'Local Server Offline' : 'Server Offline';
     appendConsole('error', `✗ Compiler server not responding at: ${baseUrl}`);
     if (isLocal) {
-      appendConsole('warn', 'To run locally: Open a terminal and run: node server.js');
+      appendConsole('warn', 'Run: node server.js  — to start the local compiler.');
     } else {
-      appendConsole('warn', 'Cloud server is waking up or URL is incorrect. Click status badge to change.');
+      appendConsole('warn', 'Render free tier is waking up (takes ~30-60s). Click Run to retry.');
+      appendConsole('info', 'The first run may be slow. Subsequent runs will be instant.');
+      // Auto-retry after 15 seconds for cloud
+      setTimeout(() => checkPistonStatus(), 15000);
     }
   }
 }
@@ -518,9 +522,9 @@ function stopCompile() {
   const ctrl = currentAbortController;
   ctrl.abort();
   // Immediately reset UI — don't wait for the async finally block
-  const btnRun  = document.getElementById('btnRun');
+  const btnRun = document.getElementById('btnRun');
   const btnStop = document.getElementById('btnStop');
-  if (btnRun)  { btnRun.classList.remove('running'); btnRun.disabled = false; }
+  if (btnRun) { btnRun.classList.remove('running'); btnRun.disabled = false; }
   if (btnStop) btnStop.classList.add('hidden');
   isRunning = false;
   currentAbortController = null;
@@ -528,7 +532,7 @@ function stopCompile() {
 }
 
 function setRunningUI(running, ctrl) {
-  const btnRun  = document.getElementById('btnRun');
+  const btnRun = document.getElementById('btnRun');
   const btnStop = document.getElementById('btnStop');
   if (running) {
     btnRun.classList.add('running');
@@ -555,7 +559,7 @@ async function runTests() {
 
   const p = ALL_PROBLEMS[currentIdx];
   const isStarter = code === p.starterCode.trim();
-  const hasTodo   = code.includes('// TODO');
+  const hasTodo = code.includes('// TODO');
   const hasReturn = code.includes('return ') || code.includes('System.out');
 
   if (!code || !code.includes('class')) {
@@ -569,7 +573,7 @@ async function runTests() {
   if (isStarter || (hasTodo && !hasReturn)) {
     showToast('Add your solution in the TODO sections!', 'error');
     appendConsole('error', '✗ The code still has unimplemented TODO sections.');
-    appendConsole('warn',  '  Fill in the TODO comments with your logic before running.');
+    appendConsole('warn', '  Fill in the TODO comments with your logic before running.');
     switchTermTab('console');
     document.getElementById('terminalPanel').classList.remove('collapsed');
     return;
@@ -628,6 +632,24 @@ async function runTests() {
           }
           break;
         }
+        if (err.name === 'ServerError') {
+          // Server is offline or waking up — show SERVER ERR on all remaining cards
+          appendConsole('error', `✗ Server error: ${err.message.split('\n')[0]}`);
+          appendConsole('warn', 'The Render backend may be cold-starting. Wait ~30s and click Run again.');
+          switchTermTab('console');
+          showToast('⚠ Server offline or waking up — try again in ~30s', 'error');
+          for (let j = i; j < p.testCases.length; j++) {
+            const card = document.getElementById(`tc-${j}`);
+            if (card) {
+              card.className = 'tc-card server-err';
+              card.querySelector('.tc-badge').textContent = '⚠ SERVER ERR';
+              const errRow = card.querySelector('.tc-val.wrong');
+              if (errRow) errRow.textContent = err.message.split('\n')[0];
+            }
+          }
+          break;
+        }
+        // Unexpected error — treat as a compile-level failure for display
         result = { pass: false, got: '', stderr: err.message, timedOut: false, compileError: true };
       }
 
@@ -716,7 +738,7 @@ async function runTests() {
 async function runCustomInput() {
   if (isRunning) { showToast('Compilation in progress...', ''); return; }
 
-  const code  = cmEditor.getValue().trim();
+  const code = cmEditor.getValue().trim();
   const stdin = document.getElementById('customInputArea').value;
   const outEl = document.getElementById('customOutputArea');
 
@@ -793,38 +815,67 @@ function fillFromTestCase() {
 // ════════════════════════════════════════════════════════════════
 //  JAVA COMPILER CALL
 // ════════════════════════════════════════════════════════════════
+class ServerError extends Error {
+  constructor(msg, status) {
+    super(msg);
+    this.name = 'ServerError';
+    this.status = status || 0;
+  }
+}
+
 async function runSingleTest(code, stdin, signal) {
-  let resp;
   const compilerUrl = getCompilerUrl();
+
+  // Combine user's abort signal with a hard 40-second timeout
+  const timeoutCtrl = new AbortController();
+  const timeoutId   = setTimeout(() => timeoutCtrl.abort(), 40000);
+  const combined    = AbortSignal.any
+    ? AbortSignal.any([signal, timeoutCtrl.signal])
+    : signal;  // fallback: just use the passed signal
+
+  let resp;
   try {
     resp = await fetch(compilerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, stdin }),
-      signal: signal || AbortSignal.timeout(30000),
+      signal: combined,
     });
   } catch (fetchErr) {
+    clearTimeout(timeoutId);
     if (fetchErr.name === 'AbortError') throw fetchErr;
-    throw new Error(
-      `Cannot reach compiler server at ${compilerUrl}.\n` +
-      `Make sure the server is running (locally or on Render/cloud).\n` +
-      `(${fetchErr.message})`
+    // Network failure (server offline, CORS, DNS, etc.)
+    const err = new ServerError(
+      `Cannot reach compiler server.\n` +
+      `Render may be waking up — wait 30s and try again.\n` +
+      `(${fetchErr.message})`,
+      0
     );
+    throw err;
   }
+
+  clearTimeout(timeoutId);
 
   if (!resp.ok) {
     const txt = await resp.text().catch(() => '');
-    throw new Error(`Compiler server error (HTTP ${resp.status}): ${txt}`);
+    const isAsleep = resp.status === 503 || resp.status === 502 || resp.status === 504;
+    const err = new ServerError(
+      isAsleep
+        ? `Compiler server is waking up (HTTP ${resp.status}). Wait ~30s then click Run again.`
+        : `Compiler server error (HTTP ${resp.status}): ${txt.slice(0, 200)}`,
+      resp.status
+    );
+    throw err;
   }
 
   const data = await resp.json();
-  if (data.error) throw new Error(data.error);
+  if (data.error) throw new ServerError(data.error, 500);
 
   return {
     compileError: data.compileError === true,
-    got:      (data.stdout || '').trim(),
-    stderr:   data.stderr  || '',
-    stdout:   data.stdout  || '',
+    got: (data.stdout || '').trim(),
+    stderr: data.stderr || '',
+    stdout: data.stdout || '',
     exitCode: data.exitCode ?? 0,
     timedOut: data.timedOut === true,
   };
@@ -836,12 +887,12 @@ async function runSingleTest(code, stdin, signal) {
 function judgeResult(result, tc) {
   if (result.compileError || result.timedOut || result.exitCode !== 0) return false;
 
-  const got      = normalizeOutput(result.got);
+  const got = normalizeOutput(result.got);
   const expected = normalizeOutput(tc.expected);
 
   if (tc.checkCount) {
-    const gotTokens = got.split(/\s+/).filter(Boolean).map(Number).sort((a,b)=>a-b);
-    const expCount  = parseInt(tc.expected);
+    const gotTokens = got.split(/\s+/).filter(Boolean).map(Number).sort((a, b) => a - b);
+    const expCount = parseInt(tc.expected);
     return gotTokens.length === expCount;
   }
 
@@ -870,8 +921,8 @@ function renderCompileErrors(stderr, code) {
     const m = line.match(lineRe);
     if (m) {
       const lineNum = parseInt(m[1]);
-      const kind    = m[2];
-      const msg     = m[3];
+      const kind = m[2];
+      const msg = m[3];
       highlightErrorLine(lineNum);
       appendConsole('compile-err', `  Line ${lineNum}: [${kind.toUpperCase()}] ${msg}`);
     } else if (line.trim().startsWith('^')) {
@@ -949,7 +1000,7 @@ function buildCard(i, statusClass, statusText, tc, result) {
 }
 
 function cardHTML(i, statusText, statusClass, tc, got, expected, errMsg) {
-  const showGot = got  !== null && got  !== undefined;
+  const showGot = got !== null && got !== undefined;
   const showExp = expected !== null && expected !== undefined;
   const showErr = errMsg !== null && errMsg !== undefined;
 
@@ -1013,10 +1064,10 @@ function showToast(msg, type) {
 // ════════════════════════════════════════════════════════════════
 function launchConfetti() {
   const c = document.getElementById('confettiCanvas');
-  c.width  = window.innerWidth;
+  c.width = window.innerWidth;
   c.height = window.innerHeight;
   const ctx = c.getContext('2d');
-  const colors = ['#32d2fe','#bf5af2','#30d158','#ff9f0a','#ff453a','#ffffff'];
+  const colors = ['#32d2fe', '#bf5af2', '#30d158', '#ff9f0a', '#ff453a', '#ffffff'];
   const pieces = Array.from({ length: 130 }, () => ({
     x: Math.random() * c.width, y: -10 - Math.random() * 120,
     vx: (Math.random() - .5) * 5, vy: 2.5 + Math.random() * 3.5,
@@ -1046,5 +1097,5 @@ function launchConfetti() {
 // ════════════════════════════════════════════════════════════════
 function escHtml(s) {
   if (s === null || s === undefined) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

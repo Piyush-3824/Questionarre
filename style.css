@@ -704,10 +704,11 @@ a { color: var(--blue); }
   min-width: 210px; max-width: 265px; flex-shrink: 0;
   font-size: .72rem; transition: border-color .25s;
 }
-.tc-card.pass { border-color: rgba(48,209,88,0.30); }
-.tc-card.fail { border-color: rgba(255,69,58,0.30); }
-.tc-card.running { border-color: rgba(50,210,254,0.25); }
-.tc-card.pending { opacity: .5; }
+.tc-card.pass       { border-color: rgba(48,209,88,0.30); }
+.tc-card.fail       { border-color: rgba(255,69,58,0.30); }
+.tc-card.running    { border-color: rgba(50,210,254,0.25); }
+.tc-card.pending    { opacity: .5; }
+.tc-card.server-err { border-color: rgba(255,159,10,0.35); }
 
 .tc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .tc-num { font-weight: 700; color: var(--text-secondary); font-size: .68rem; font-family: var(--font-sans); }
@@ -716,10 +717,11 @@ a { color: var(--blue); }
   padding: 2px 8px; border-radius: 10px;
   text-transform: uppercase; letter-spacing: .4px;
 }
-.pass .tc-badge    { background: rgba(48,209,88,0.14);  color: var(--green); }
-.fail .tc-badge    { background: rgba(255,69,58,0.14);  color: var(--red); }
-.running .tc-badge { background: rgba(50,210,254,0.10); color: var(--cyan); }
-.pending .tc-badge { background: rgba(99,99,102,0.14);  color: var(--text-muted); }
+.pass .tc-badge       { background: rgba(48,209,88,0.14);  color: var(--green); }
+.fail .tc-badge       { background: rgba(255,69,58,0.14);  color: var(--red); }
+.running .tc-badge    { background: rgba(50,210,254,0.10); color: var(--cyan); }
+.pending .tc-badge    { background: rgba(99,99,102,0.14);  color: var(--text-muted); }
+.server-err .tc-badge { background: rgba(255,159,10,0.15); color: var(--orange); }
 
 .tc-row { display: flex; flex-direction: column; margin-bottom: 5px; }
 .tc-key {
