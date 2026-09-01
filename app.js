@@ -5,7 +5,14 @@
 // ════════════════════════════════════════════════════════════════
 
 function getCompilerBaseUrl() {
-  return (localStorage.getItem('jp_compiler_url') || 'http://localhost:7654').replace(/\/+$/, '');
+  const saved = localStorage.getItem('jp_compiler_url');
+  if (saved) return saved.replace(/\/+$/, '');
+  
+  const isLocal = window.location.hostname === 'localhost' || 
+                  window.location.hostname === '127.0.0.1' || 
+                  window.location.protocol === 'file:';
+  
+  return isLocal ? 'http://localhost:7654' : 'https://questionarre.onrender.com';
 }
 
 function getCompilerUrl() { return `${getCompilerBaseUrl()}/run`; }
@@ -356,7 +363,7 @@ async function checkPistonStatus() {
   const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
 
   try {
-    const res = await fetch(getPingUrl(), { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(getPingUrl(), { signal: AbortSignal.timeout(15000) });
     if (res.ok) {
       const data = await res.json();
       dot.classList.add('online');
