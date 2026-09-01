@@ -4,8 +4,12 @@
 //  The local server uses your installed JDK (javac + java)
 // ════════════════════════════════════════════════════════════════
 
-const COMPILER_URL = 'http://localhost:7654/run';
-const PING_URL     = 'http://localhost:7654/ping';
+function getCompilerBaseUrl() {
+  return (localStorage.getItem('jp_compiler_url') || 'http://localhost:7654').replace(/\/+$/, '');
+}
+
+function getCompilerUrl() { return `${getCompilerBaseUrl()}/run`; }
+function getPingUrl()     { return `${getCompilerBaseUrl()}/ping`; }
 
 // ── State ──
 let currentIdx = 0;
@@ -59,10 +63,29 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProblem(0);
   updateHeader();
   checkPistonStatus();
+  const apiStatusEl = document.getElementById('apiStatus');
+  if (apiStatusEl) {
+    apiStatusEl.style.cursor = 'pointer';
+    apiStatusEl.title = 'Click to configure Compiler URL (Localhost or Cloud/Render)';
+    apiStatusEl.onclick = configureCompilerUrl;
+  }
   document.getElementById('sidebarToggle').onclick = () => {
     document.getElementById('sidebar').classList.toggle('collapsed');
   };
 });
+
+function configureCompilerUrl() {
+  const current = getCompilerBaseUrl();
+  const next = prompt(
+    'Enter Java Compiler Backend URL:\n(e.g., https://my-java-compiler.onrender.com or http://localhost:7654)',
+    current
+  );
+  if (next !== null && next.trim()) {
+    localStorage.setItem('jp_compiler_url', next.trim());
+    showToast('Compiler URL updated', 'success');
+    checkPistonStatus();
+  }
+}
 
 // ════════════════════════════════════════════════════════════════
 //  CODEMIRROR SETUP
@@ -329,22 +352,29 @@ function appendConsole(type, text) {
 async function checkPistonStatus() {
   const dot  = document.querySelector('.api-dot');
   const text = document.getElementById('apiStatusText');
+  const baseUrl = getCompilerBaseUrl();
+  const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
+
   try {
-    const res = await fetch(PING_URL, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(getPingUrl(), { signal: AbortSignal.timeout(4000) });
     if (res.ok) {
       const data = await res.json();
       dot.classList.add('online');
-      text.textContent = 'Local JDK Ready';
-      appendConsole('success', `✓ Java compiler ready (JDK ${data.javaVersion || 'detected'})`);
-      appendConsole('info', 'Write your solution above, then click "Run & Compile" (Ctrl+Enter).');
+      dot.classList.remove('offline');
+      text.textContent = isLocal ? 'Local JDK Ready' : 'Cloud Compiler Online';
+      appendConsole('success', `✓ Java compiler ready (${data.javaVersion ? 'JDK ' + data.javaVersion : 'Online'})`);
+      appendConsole('info', `Connected to: ${baseUrl}`);
     } else throw new Error();
   } catch {
     dot.classList.add('offline');
+    dot.classList.remove('online');
     text.textContent = 'Server Offline';
-    appendConsole('error', '✗ Compiler server not running!');
-    appendConsole('warn', 'To fix: Open a terminal in the project folder and run:');
-    appendConsole('prompt', '  node server.js');
-    appendConsole('info', 'Then refresh this page.');
+    appendConsole('error', `✗ Compiler server not responding at: ${baseUrl}`);
+    if (isLocal) {
+      appendConsole('warn', 'To run locally: Open a terminal and run: node server.js');
+    } else {
+      appendConsole('warn', 'Cloud server is waking up or URL is incorrect. Click status badge to change.');
+    }
   }
 }
 
@@ -491,8 +521,9 @@ async function runTests() {
 // ════════════════════════════════════════════════════════════════
 async function runSingleTest(code, stdin, testIndex) {
   let resp;
+  const compilerUrl = getCompilerUrl();
   try {
-    resp = await fetch(COMPILER_URL, {
+    resp = await fetch(compilerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, stdin }),
@@ -500,8 +531,8 @@ async function runSingleTest(code, stdin, testIndex) {
     });
   } catch (fetchErr) {
     throw new Error(
-      `Cannot reach compiler server.\n` +
-      `Make sure server.js is running: open a terminal and run "node server.js" in the project folder.\n` +
+      `Cannot reach compiler server at ${compilerUrl}.\n` +
+      `Make sure the server is running (locally or on Render/cloud).\n` +
       `(${fetchErr.message})`
     );
   }

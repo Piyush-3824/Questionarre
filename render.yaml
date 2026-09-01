@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: java-practice-compiler
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /ping

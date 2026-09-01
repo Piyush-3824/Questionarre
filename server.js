@@ -8,7 +8,8 @@ const path    = require('path');
 const os      = require('os');
 const { exec } = require('child_process');
 
-const PORT    = 7654;
+const PORT    = process.env.PORT || 7654;
+const HOST    = '0.0.0.0';
 const TIMEOUT = 10000; // 10 seconds max per run
 
 // CORS + response helper
@@ -135,10 +136,10 @@ http.createServer(async (req, res) => {
 
   reply(res, 404, { error: 'Not found' });
 
-}).listen(PORT, '127.0.0.1', () => {
-  console.log(`\n  JavaPractice Compiler Server running on http://localhost:${PORT}`);
+}).listen(PORT, HOST, () => {
+  console.log(`\n  JavaPractice Compiler Server running on http://${HOST}:${PORT}`);
   console.log(`  Using Java: javac / java from PATH`);
-  console.log(`  Keep this terminal open while you practice!\n`);
+  console.log(`  Ready for compilation requests!\n`);
 });
 
 // Run Java with proper stdin piping using child_process.spawn
