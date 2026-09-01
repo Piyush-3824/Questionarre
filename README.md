@@ -58,7 +58,6 @@ The header will show **"Local JDK Ready"** when the compiler is connected.
 ├── problems.js     # All 15 problems + test cases + solutions
 ├── app.js          # Frontend logic + CodeMirror + test runner
 ├── server.js       # Node.js backend — real Java compiler (javac + java)
-└── 8- Important Practice Questions- Collections - Notes.pdf  # Original notes
 ```
 
 ## Keyboard Shortcuts
