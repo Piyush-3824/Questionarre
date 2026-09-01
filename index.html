@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JavaPractice - Collections Challenge</title>
+  <meta name="description" content="Practice Java Collections problems from your professor notes. Real Java compiler, LeetCode-style." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <!-- CodeMirror 5 (Java syntax highlighting + addons) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ══════════ HEADER ══════════ -->
+  <header class="header">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8.5 3C8.5 3 7 5 7 8C7 11 9.5 12 9.5 12C9.5 12 8 13.5 8 15C8 16.5 9 18 11 18H14C15.1 18 16 17.1 16 16V9C16 7.9 15.1 7 14 7H10C9.5 7 9 7.5 9 8V11" stroke="url(#coffeeGrad)" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M16 9H18C19.1 9 20 9.9 20 11V13C20 14.1 19.1 15 18 15H16" stroke="url(#coffeeGrad)" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M6 21H18" stroke="url(#coffeeGrad)" stroke-width="1.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="coffeeGrad" x1="6" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#00d4ff"/><stop offset="1" stop-color="#7c3aed"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="logo-text">Java<span class="logo-accent">Practice</span></span>
+    </div>
+
+    <div class="header-center">
+      <span class="topic-badge">&#x2615; Java Collections · Real Compiler</span>
+    </div>
+
+    <div class="header-right">
+      <div class="api-status" id="apiStatus" title="Compiler status">
+        <span class="api-dot"></span><span id="apiStatusText">Connecting...</span>
+      </div>
+      <div class="progress-info">
+        <span id="solvedCount">0</span><span class="prog-label">/15 Solved</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Progress bar -->
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+  </div>
+
+  <!-- ══════════ LAYOUT ══════════ -->
+  <div class="app-layout">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Problems</h2>
+        <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">&#x2039;</button>
+      </div>
+      <div class="problem-list" id="problemList"></div>
+      <div class="nav-arrows">
+        <button class="nav-btn" onclick="prevProblem()">&#8592; Prev</button>
+        <button class="nav-btn" onclick="nextProblem()">Next &#8594;</button>
+      </div>
+    </aside>
+
+    <!-- ── MAIN ── -->
+    <main class="main-content" id="mainContent">
+
+      <div class="editor-layout">
+
+        <!-- ── DESCRIPTION ── -->
+        <div class="description-panel" id="descriptionPanel">
+          <div class="panel-tabs">
+            <button class="tab-btn active" id="tabDesc" onclick="switchTab('desc')">&#x1F4CB; Description</button>
+            <button class="tab-btn" id="tabHint" onclick="switchTab('hint')">&#x1F4A1; Hint</button>
+            <button class="tab-btn" id="tabSolution" onclick="switchTab('solution')">&#x1F511; Solution</button>
+          </div>
+
+          <div class="panel-body" id="panelDesc">
+            <div class="problem-header">
+              <div class="problem-meta">
+                <span class="problem-number" id="problemNumber">#1</span>
+                <span class="difficulty-badge easy" id="difficultyBadge">Easy</span>
+              </div>
+              <h1 class="problem-title" id="problemTitle">Add New Product Codes</h1>
+            </div>
+            <div class="problem-body" id="problemBody"></div>
+          </div>
+
+          <div class="panel-body hidden" id="panelHint">
+            <div class="hint-box" id="hintBox"></div>
+          </div>
+
+          <div class="panel-body hidden" id="panelSolution">
+            <div class="solution-warning">&#x26A0; Try solving it yourself first!</div>
+            <div class="solution-code-wrap" id="solutionCode"></div>
+          </div>
+        </div>
+
+        <!-- ── EDITOR ── -->
+        <div class="editor-panel">
+          <div class="editor-toolbar">
+            <div class="editor-toolbar-left">
+              <span class="file-name">&#x1F4C4; Main.java</span>
+              <span class="lang-badge">Java 17</span>
+              <span class="compiler-badge" id="compilerBadge">&#x1F4BB; Piston Compiler</span>
+            </div>
+            <div class="editor-toolbar-right">
+              <button class="btn btn-ghost" onclick="formatCode()" title="Format code (auto-indent)">&#x2728; Format</button>
+              <button class="btn btn-ghost" id="btnReset" onclick="resetCode()">&#x21BA; Reset</button>
+              <button class="btn btn-run" id="btnRun" onclick="runTests()">
+                <span class="run-icon">&#x25B6;</span>
+                <span class="run-text">Run &amp; Compile</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- CodeMirror will be inserted here -->
+          <div class="cm-host" id="cmHost"></div>
+
+          <!-- Keyword hints bar -->
+          <div class="keyword-bar" id="keywordBar">
+            <span class="kw-label">Quick insert:</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══════════ TERMINAL CONSOLE ══════════ -->
+      <div class="terminal-panel" id="terminalPanel">
+        <div class="terminal-header">
+          <div class="terminal-traffic">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <span class="terminal-title">&#x1F5A5; Terminal — Java Compiler Output</span>
+          <div class="terminal-tabs">
+            <button class="term-tab active" id="ttResults" onclick="switchTermTab('results')">Test Results</button>
+            <button class="term-tab" id="ttConsole" onclick="switchTermTab('console')">Console</button>
+          </div>
+          <div class="terminal-actions">
+            <button class="term-btn" onclick="clearTerminal()" title="Clear terminal">&#x1F5D1; Clear</button>
+            <button class="term-btn" onclick="toggleTerminal()" id="termToggleBtn" title="Toggle terminal">&#x25BE;</button>
+          </div>
+        </div>
+
+        <div class="terminal-body" id="terminalBody">
+          <!-- Test Results tab -->
+          <div id="tabResults" class="term-pane">
+            <div class="testcase-scroll" id="testcaseList"></div>
+          </div>
+          <!-- Console tab -->
+          <div id="tabConsole" class="term-pane hidden">
+            <div class="console-output" id="consoleOutput">
+              <span class="console-line prompt">$ javac Main.java &amp;&amp; java Main</span>
+              <span class="console-line info">Ready. Write your code and click "Run &amp; Compile".</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+  <!-- Confetti -->
+  <canvas id="confettiCanvas" style="position:fixed;top:0;left:0;pointer-events:none;z-index:9999;"></canvas>
+
+  <!-- CodeMirror scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/display/placeholder.min.js"></script>
+
+  <script src="problems.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
