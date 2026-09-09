@@ -16,7 +16,7 @@ function getCompilerUrl() { return `${getCompilerBaseUrl()}/run`; }
 function getPingUrl() { return `${getCompilerBaseUrl()}/ping`; }
 
 // ── State ──
-const ALL_PROBLEMS = [...PROBLEMS, ...EXCEPTION_PROBLEMS];
+const ALL_PROBLEMS = [...PROBLEMS, ...EXCEPTION_PROBLEMS, ...HASHMAP_PROBLEMS];
 let currentIdx = 0;
 let solved = new Set(JSON.parse(localStorage.getItem('jp_solved') || '[]'));
 let attempted = new Set(JSON.parse(localStorage.getItem('jp_attempted') || '[]'));
@@ -283,6 +283,12 @@ function buildSidebar() {
       const h = document.createElement('div');
       h.className = 'sidebar-section-title exception-section';
       h.innerHTML = '&#x26A0; Exception Handling';
+      list.appendChild(h);
+    }
+    if (i === PROBLEMS.length + EXCEPTION_PROBLEMS.length) {
+      const h = document.createElement('div');
+      h.className = 'sidebar-section-title hashmap-section';
+      h.innerHTML = '&#x1F5FA; HashMap Questions';
       list.appendChild(h);
     }
     const el = document.createElement('div');
